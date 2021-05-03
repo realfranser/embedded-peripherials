@@ -192,13 +192,13 @@ IVR		EQU		$EFFC19
     SCAN:       LINK    A6,#0           * Los parametros de entrada estan 8B detras del puntero de pila
                 MOVE.L  8(A6),A1        * A1 -> primer param (direccion del buffer destino)
 
-                EOR.L   D0
+                EOR.L   D0,D0
                 MOVE.W  12(A6),D0       * D0 -> segundo param (descriptor del dispositivo sobre el que se lee)
 
-                EOR.L   D1
+                EOR.L   D1,D1
                 MOVE.W  14(A6),D1       * D1 -> tercer param (size, num max de caracteres a copiar)
 
-                EOR.L   D2              * D2 -> retorno (contador de carcteres leidos)
+                EOR.L   D2,D2              * D2 -> retorno (contador de carcteres leidos)
 
                 ***Seccion de deteccion de errores***
                 CMP.W   #0,D1           * Si el size < 0 -> error (absurdo!)
@@ -235,12 +235,12 @@ IVR		EQU		$EFFC19
     *╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝   ╚═╝   *
 
     PRINT:      LINK  A6,#0             * Los parametros de entrada estan 8B detras del puntero de pila
-                MOVE.L  8(A6),A1        * A1 -> primer param (direccion del buffer destino)
+                MOVE.L  8(A6),A1        * A1 -> primer param (direccion del buffer origen)
 
-                EOR.L   D0
+                EOR.L   D0,D0
                 MOVE.W  12(A6),D0       * D0 -> segundo param (descriptor del dispositivo sobre el que se lee)
                 * No se debe usar D1 ya que es un parametro de ESCCAR
-                EOR.L   D2 * Puede que no haga falta este
+                EOR.L   D2,D2 * Puede que no haga falta este
                 MOVE.W  14(A6),D2       * D2 -> tercer param (size, num max de caracteres a copiar)
 
                 EOR.L   D3,D3           * D3 -> retorno (contador de carcteres escritos)
@@ -280,7 +280,8 @@ IVR		EQU		$EFFC19
                 BSET    D2,IMR
                 BSET    D2,IMRCOPY           
                 MOVE.W  D4,SR           * Restauramos SR (status register)
-                MOVE.L  D3,D0           * D3 (ret -> num car escritos) MV a D0
+
+    PR_OK:      MOVE.L  D3,D0           * D3 (ret -> num car escritos) MV a D0
                 BRA     PR_END
 
     PR_ERR:     MOVE.L  #-1,D0
@@ -608,6 +609,25 @@ p_scan_3:   MOVE.L  #10,D3
             BNE     AMENTET
             MOVE.L  D3,D4
 
+    *██████╗ ██████╗ ██╗███╗   ██╗████████╗*
+  ***██╔══██╗██╔══██╗██║████╗  ██║╚══██╔══╝***
+*****██████╔╝██████╔╝██║██╔██╗ ██║   ██║   *****
+*****██╔═══╝ ██╔══██╗██║██║╚██╗██║   ██║   *****
+  ***██║     ██║  ██║██║██║ ╚████║   ██║   ***
+    *╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝   ╚═╝   *
+
+p_prt_1:
+            MOVE.L  #$100,D3
+            MOVE.L  #3,D7
+            BSR     BUCESNFF
+            MOVE.W  #$100,-(A7)
+            MOVE.W  #1,-(A7)
+            MOVE.L  #$5000,-(A7)
+            BSR     PRINT
+            CMP.L   #$100,D0
+            BNE     AMENTET
+            MOVE.L  D3,D4
+            
 
 *********************************************************
 * █████╗ ██╗   ██╗██╗  ██╗██╗██╗     ██╗ █████╗ ██████╗ *
@@ -616,7 +636,7 @@ p_scan_3:   MOVE.L  #10,D3
 *██╔══██║██║   ██║ ██╔██╗ ██║██║     ██║██╔══██║██╔══██╗*
 *██║  ██║╚██████╔╝██╔╝ ██╗██║███████╗██║██║  ██║██║  ██║*
 *╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝*
-********************************************************
+*********************************************************
 
 * La rutina AMENTET hace referencia a la diosa egipcia homonima la cual era la patrona de las puertas
 * del inframundo en el que esperaba a los difuntos que no superaban las pruebas en su camino al paraiso.
