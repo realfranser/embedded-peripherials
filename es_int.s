@@ -341,11 +341,11 @@ IVR		EQU		$EFFC19
     *╚═╝  ╚═╝   ╚═╝   ╚═╝*
                     
     RTI:        LINK    A6,#-12
-    BUCLE1:     MOVE.L  D0,-4(A6)
+                MOVE.L  D0,-4(A6)
                 MOVE.L  D1,-8(A6)
                 MOVE.L  D2,-12(A6)
                 * Identificar la fuente de interrupcion
-                MOVE.B  ISR,D2
+    RTI_BUC:    MOVE.B  ISR,D2
                 AND.B   IMRCOPY,D2
                 * PUEDE QUE SEA BEQ
                 BTST    #1,D2           * Recepcion linea A
@@ -356,6 +356,7 @@ IVR		EQU		$EFFC19
                 BNE     TXLA
                 BTST    #4,D2           * Transmision linea B
                 BNE     TXLB
+                BRA     RTI_END
 
                 * Tratamiento de la interrupcion
     RXLA:       MOVE.B  RBA,D1
@@ -364,7 +365,7 @@ IVR		EQU		$EFFC19
                 * Special: escribir en buffer lleno -> terminar
                 CMP.L   #-1,D0
                 BEQ     RTI_END
-                BRA     BUCLE1
+                BRA     RTI_BUC
 
     RXLB:       MOVE.B  RBB,D1
                 MOVE.B  #1,D0
@@ -372,7 +373,7 @@ IVR		EQU		$EFFC19
                 * Special: escribir en buffer lleno -> terminar
                 CMP.L   #-1,D0
                 BEQ     RTI_END
-                BRA     BUCLE1
+                BRA     RTI_BUC
 
     TXLA:       MOVE.L  #2,D0
                 BSR     LEECAR
@@ -380,11 +381,11 @@ IVR		EQU		$EFFC19
                 CMP.L   #-1,D0
                 BEQ     INHA
                 MOVE.B  D0,TBA
-                BRA     BUCLE1
+                BRA     RTI_BUC
 
     INHA:       BCLR    #0,IMRCOPY
                 BCLR    #0,IMR
-                BRA     BUCLE1
+                BRA     RTI_END
 
     TXLB:       MOVE.L  #3,D0
                 BSR     LEECAR
@@ -392,11 +393,11 @@ IVR		EQU		$EFFC19
                 CMP.L   #-1,D0
                 BEQ     INHB
                 MOVE.B  D0,TBB
-                BRA     BUCLE1
+                BRA     RTI_BUC
 
     INHB:       BCLR    #4,IMRCOPY
                 BCLR    #4,IMR
-                BRA     BUCLE1
+                *BRA     BUCLE1  * Esto o lo de abajo ?
 
     RTI_END:    MOVE.L  -12(A6),D2
                 MOVE.L  -8(A6),D1
