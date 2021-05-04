@@ -340,71 +340,71 @@ IVR		EQU		$EFFC19
   ***██║  ██║   ██║   ██║***
     *╚═╝  ╚═╝   ╚═╝   ╚═╝*
                     
-    RTI:        LINK    A6,#-12
-                MOVE.L  D0,-4(A6)
-                MOVE.L  D1,-8(A6)
-                MOVE.L  D2,-12(A6)
-                * Identificar la fuente de interrupcion
-    RTI_BUC:    MOVE.B  ISR,D2
-                AND.B   IMRCOPY,D2
-                * PUEDE QUE SEA BEQ
-                BTST    #1,D2           * Recepcion linea A
-                BNE     RXLA
-                BTST    #5,D2           * Recepcion linea B
-                BNE     RXLB
-                BTST    #0,D2           * Transmision linea A
-                BNE     TXLA
-                BTST    #4,D2           * Transmision linea B
-                BNE     TXLB
-                BRA     RTI_END
-
-                * Tratamiento de la interrupcion
-    RXLA:       MOVE.B  RBA,D1
-                MOVE.B  #0,D0
-                BSR     ESCCAR
-                * Special: escribir en buffer lleno -> terminar
-                CMP.L   #-1,D0
-                BEQ     RTI_END
-                BRA     RTI_BUC
-
-    RXLB:       MOVE.B  RBB,D1
-                MOVE.B  #1,D0
-                BSR     ESCCAR
-                * Special: escribir en buffer lleno -> terminar
-                CMP.L   #-1,D0
-                BEQ     RTI_END
-                BRA     RTI_BUC
-
-    TXLA:       MOVE.L  #2,D0
-                BSR     LEECAR
-                * Special: leer en buffer vacio -> terminar
-                CMP.L   #-1,D0
-                BEQ     INHA
-                MOVE.B  D0,TBA
-                BRA     RTI_BUC
-
-    INHA:       BCLR    #0,IMRCOPY
-                BCLR    #0,IMR
-                BRA     RTI_END
-
-    TXLB:       MOVE.L  #3,D0
-                BSR     LEECAR
-                * Special: leer en buffer vacio -> terminar
-                CMP.L   #-1,D0
-                BEQ     INHB
-                MOVE.B  D0,TBB
-                BRA     RTI_BUC
-
-    INHB:       BCLR    #4,IMRCOPY
-                BCLR    #4,IMR
-                *BRA     BUCLE1  * Esto o lo de abajo ?
-
-    RTI_END:    MOVE.L  -12(A6),D2
-                MOVE.L  -8(A6),D1
-                MOVE.L  -4(A6),D0
-                UNLK    A6
-                RTE
-
+    RTI:        
+*    LINK    A6,#-12
+*                MOVE.L  D0,-4(A6)
+*                MOVE.L  D1,-8(A6)
+*                MOVE.L  D2,-12(A6)
+*                * Identificar la fuente de interrupcion
+*    RTI_BUC:    MOVE.B  ISR,D2
+*                AND.B   IMRCOPY,D2
+*                * PUEDE QUE SEA BEQ
+*                BTST    #1,D2           * Recepcion linea A
+*                BNE     RXLA
+*                BTST    #5,D2           * Recepcion linea B
+*                BNE     RXLB
+*                BTST    #0,D2           * Transmision linea A
+*                BNE     TXLA
+*                BTST    #4,D2           * Transmision linea B
+*                BNE     TXLB
+*                BRA     RTI_END
+*
+*                * Tratamiento de la interrupcion
+*    RXLA:       MOVE.B  RBA,D1
+*                MOVE.B  #0,D0
+*                BSR     ESCCAR
+*                * Special: escribir en buffer lleno -> terminar
+*                CMP.L   #-1,D0
+*                BEQ     RTI_END
+*                BRA     RTI_BUC
+*
+*    RXLB:       MOVE.B  RBB,D1
+*                MOVE.B  #1,D0
+*                BSR     ESCCAR
+*                * Special: escribir en buffer lleno -> terminar
+*                CMP.L   #-1,D0
+*                BEQ     RTI_END
+*                BRA     RTI_BUC
+*
+*    TXLA:       MOVE.L  #2,D0
+*                BSR     LEECAR
+*                * Special: leer en buffer vacio -> terminar
+*                CMP.L   #-1,D0
+*                BEQ     INHA
+*                MOVE.B  D0,TBA
+*                BRA     RTI_BUC
+*
+*    INHA:       BCLR    #0,IMRCOPY
+*                BCLR    #0,IMR
+*                BRA     RTI_END
+*
+*    TXLB:       MOVE.L  #3,D0
+*                BSR     LEECAR
+*                * Special: leer en buffer vacio -> terminar
+*                CMP.L   #-1,D0
+*                BEQ     INHB
+*                MOVE.B  D0,TBB
+*                BRA     RTI_BUC
+*
+*    INHB:       BCLR    #4,IMRCOPY
+*                BCLR    #4,IMR
+*                *BRA     BUCLE1  * Esto o lo de abajo ?
+*
+*    RTI_END:    MOVE.L  -12(A6),D2
+*                MOVE.L  -8(A6),D1
+*                MOVE.L  -4(A6),D0
+*                UNLK    A6
+                 RTE
 
 
 BUFFER:     DS.B    2100 * Buffer para lectura y escritura de caracteres
@@ -424,7 +424,7 @@ INICIO:     MOVE.L #BUS_ERROR,8 * Bus error handler
             MOVE.L #ILLEGAL_IN,44 * Illegal instruction handler
 
             BSR INIT
-            MOVE.W #$2000,SR * Permite interrupciones
+            *MOVE.W #$2000,SR * Permite interrupciones
 
 *** Hay que escribir en el buffer A (0) el contenido que queremos tratar ***
             MOVE.W #2000,D3
@@ -755,6 +755,7 @@ p_scan_1:
     MOVE.W  #0,-(A7)
     MOVE.L  #$5000,-(A7)
     BSR     SCAN
+    ADD.L #8,A7 * Restablece la pila
     CMP.L   #$100,D0
     BNE     AMENTET
 
@@ -773,6 +774,7 @@ p_s_2_b:    CMP.L   #4,D4
             MOVE.W  #1,-(A7)
             MOVE.L  #$5000,-(A7)
             BSR     SCAN
+            ADD.L #8,A7 * Restablece la pila
             CMP.L   #$25,D0
             BNE     AMENTET
             ADD.L   #1,D4
@@ -789,6 +791,7 @@ p_scan_3:   MOVE.L  #10,D3
             MOVE.W  #0,-(A7)
             MOVE.L  #$5000,-(A7)
             BSR     SCAN
+            ADD.L #8,A7 * Restablece la pila
             CMP.L   #10,D0
             BNE     AMENTET
             MOVE.L  D3,D4
@@ -808,6 +811,7 @@ p_prt_1:
             MOVE.W  #1,-(A7)
             MOVE.L  #$5000,-(A7)
             BSR     PRINT
+            ADD.L #8,A7 * Restablece la pila
             CMP.L   #$100,D0
             BNE     AMENTET
             MOVE.L  D3,D4
@@ -822,6 +826,7 @@ p_prt_2:
             MOVE.W  #1,-(A7)
             MOVE.L  #$5001,-(A7)
             BSR     PRINT
+            ADD.L #8,A7 * Restablece la pila
             CMP.L   #$6D0,D0
             BNE     AMENTET
             MOVE.L  D3,D4
@@ -832,6 +837,7 @@ p_prt_3:
             MOVE.W  #-1,-(A7)
             MOVE.L  #$5001,-(A7)
             BSR     PRINT
+            ADD.L #8,A7 * Restablece la pila
             CMP.L   #-1,D0
             BNE     AMENTET
             MOVE.L  D3,D4
@@ -841,6 +847,7 @@ p_prt_4:
             MOVE.W  #1,-(A7)
             MOVE.L  #$5001,-(A7)
             BSR     PRINT
+            ADD.L #8,A7 * Restablece la pila
             CMP.L   #-1,D0
             BNE     AMENTET
             MOVE.L  D3,D4
@@ -850,6 +857,7 @@ p_prt_5:
             MOVE.W  #1,-(A7)
             MOVE.L  #$5001,-(A7)
             BSR     PRINT
+            ADD.L #8,A7 * Restablece la pila
             CMP.L   #0,D0
             BNE     AMENTET
             MOVE.L  D3,D4
@@ -983,81 +991,3 @@ BIEN: MOVE.L #$abcdef10,D5
 MAL: MOVE.L #-1,D5
 
 FINC: BREAK
-
-
-** Given by guide
-**
-**INICIO: * Manejadores de excepciones
-**    MOVE.L  #BUS_ERROR,8     * Bus error handler
-**    MOVE.L  #ADDRESS_ER,12   * Address error handler
-**    MOVE.L  #ILLEGAL_IN,16   * Illegal instruction handler
-**    MOVE.L  #PRIV_VIOLT,32   * Privilege Violation handler
-**
-**    BSR     INIT
-**    MOVE.W  #$2000,SR        * Permite interrupciones
-**
-**BUCPR:
-**    MOVE.W  #0,CONTC         * Inicializa contador de caracteres
-**    MOVE.W  #NLIN,CONTL      * Inicializa contador de lineas
-**    MOVE.L  #BUFFER,DIRLEC   * Direccion de lectura = comienzo del buffer
-**
-**OTRAL:
-**    MOVE.W  #TAML,-(A7)      * Tamano maximo de la linea
-**    MOVE.W  #DESB,-(A7)      * Puerto A
-**    MOVE.L  DIRLEC,-(A7)     * Direccion de lectura
-**
-**ESPL:
-**    BSR     SCAN
-**    CMP.L   #0,D0
-**    BEQ     ESPL             * Si no se ha leido la linea, se intenta de nuevo
-**    ADD.L   #8,A7            * Reestablece la pila
-**    ADD.L   D0,DIRLEC        * Calcula la nueva direccion de lectura
-**    ADD.W   D0,CONTC         * Actualiza el contador de caracteres
-**
-**    SUB.W   #1,CONTL         * Actualiza el numero de lineas leidas.
-**    BNE     OTRAL            * Si no se han leido todas, se vuelve a leer
-**
-**    MOVE.L  #BUFFER,DIRLEC   * DIreccion de lectura = comienzo del buffer
-**
-**OTRAE:
-**    MOVE.W  #TAMB,TAME       * Tamano de escritura = tamano de bloque
-**
-**ESPE:
-**    MOVE.W  TAME,-(A7)       * Tamano de escritura
-**        MOVE.W  #DESA,-(A7)      * Puerto B
-**        MOVE.L  DIRLEC,-(A7)     * Direccion de lectura
-**    * BREAK
-**    BSR     PRINT
-**    ADD.L   #8,A7            * Reestablece la pila
-**    ADD.L   D0,DIRLEC        * Calcula la nueva direccion del buffer
-**    SUB.W   D0,CONTC         * Actualiza el contador de caracteres
-**    BEQ     SALIR            * Si no quedan caracteres, se acaba
-**    SUB.W   D0,TAME          * Actualiza el tamano de escritura
-**    BNE     ESPE             * Si no se ha escrito todo el bloque, se insiste
-**    CMP.W   #TAMB,CONTC      * Si el numero de caracteres restantes es menor que el establecido, se transmite ese numero
-**    BHI     OTRAE            * Siguiente bloque
-**    MOVE.W  CONTC,TAME
-**    BRA     ESPE             * Siguiente bloque
-**
-**SALIR:
-**    BRA     BUCPR
-**
-**FIN:
-**    BREAK
-**
-**BUS_ERROR:
-**    BREAK                    * Bus error handler
-**    NOP
-**
-**ADDRESS_ER:
-**    BREAK                    * Address error handler
-**    NOP
-**
-**ILLEGAL_IN:
-**    BREAK                    * Illegal instruction handler
-**    NOP
-**
-**PRIV_VIOLT:
-**    BREAK                    * Priviledge violation handler
-**    NOP
-**
