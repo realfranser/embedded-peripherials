@@ -293,48 +293,80 @@
 				BRA		SIGUE2
 	NOLLENO:	MOVE.L 	A2,4(A0)	*Actualizamos el puntero de inserción en memoria
 				MOVE.L 	#0,D0		*D0=0 para indicar que hemos tenido éxito (también se puede poner EOR.L D0,D0)
-	FINEC:		MOVEM.L (A7)+,A0-A2
-	
-				*A0=M(A7)
-				*A7=A7+4
-				*A1=M(A7)
-				*A7=A7+4
-				*A2=M(A7)
-				*A7=A7+4
-				
+	FINEC:		MOVEM.L (A7)+,A0-A2				
 				RTS
 
-	PPAL:		MOVE.L #BUS_ERROR,8 * Bus error handler
-				MOVE.L #ADDRESS_ER,12 * Address error handler
-				MOVE.L #ILLEGAL_IN,16 * Illegal instruction handler
-				MOVE.L #PRIV_VIOLT,32 * Privilege violation handler
-				MOVE.L #ILLEGAL_IN,40 * Illegal instruction handler
-				MOVE.L #ILLEGAL_IN,44 * Illegal instruction handler
+	BUFFER: 	DS.B 2100 	* Buffer para lectura y escritura de caracteres
+	PARDIR: 	DC.L 0 		* Dirección que se pasa como parámetros
+	PARTAM: 	DC.W 0 		* Tamaño que se pasa como parámetro
+	CONTC: 		DC.W 0 		* Contador de caracteres a imprimir	
+	
+	
+	PPAL:		MOVE.L 	#BUS_ERROR,8 * Bus error handler
+				MOVE.L 	#ADDRESS_ER,12 * Address error handler
+				MOVE.L 	#ILLEGAL_IN,16 * Illegal instruction handler
+				MOVE.L 	#PRIV_VIOLT,32 * Privilege violation handler
+				MOVE.L 	#ILLEGAL_IN,40 * Illegal instruction handler
+				MOVE.L 	#ILLEGAL_IN,44 * Illegal instruction handler
 				
-				BSR INIT
+				BSR 	INIT
+				MOVE.W 	#$2000,SR 		* Permite interrupciones
 				
-				MOVE.L 	#1,D0	*D0=1 (Rx Línea B)
+				MOVE.L 	#1,D0			*D0=1 (Rx Línea B)
 				MOVE.B  $41,D1
 				BSR 	ESCCAR
 				
 				MOVE.L 	#1,D0
-				BSR 	LEECAR	*Si todo va bien, en D0 deberíamos tener $41
+				BSR 	LEECAR			*Si todo va bien, en D0 deberíamos tener $41
 				
 				MOVE.L 	#2002,D2
-	BUCLE:		MOVE.L 	#1,D0	*D0=1 (Rx Línea B)
+	BUCLE:		MOVE.L 	#1,D0			*D0=1 (Rx Línea B)
 				MOVE.B  $41,D1
 				BSR 	ESCCAR
 				SUB.L 	#1,D2	
 				CMP.L 	#0,D2
-				BNE		BUCLE	*Cuando salga del bucle, el valor de D0 debería ser -1, pq ya está lleno el buffer
+				BNE		BUCLE			*Cuando salga del bucle, el valor de D0 debería ser -1, pq ya está lleno el buffer
 				
-	BUS_ERROR: 	BREAK * Bus error handler
+	BUCPR: 		MOVE.W 	#30,PARTAM		* Inicializa parámetro de tamaño
+				MOVE.L 	#BUFFER,PARDIR 	* Parámetro BUFFER = comienzo del buffer
+	OTRAL: 		MOVE.W 	PARTAM,-(A7) 	* Tamaño de bloque
+				MOVE.L 	#0,D0 			* Puerto A (si cogemos 1, puerto B)
+				MOVE.W 	D0,-(A7) 		* Puerto A
+				MOVE.L 	PARDIR,-(A7)	* Dirección de buffer de lectura
+	ESPL: 		BSR 	SCAN
+				ADD.L 	#8,A7 			* Restablece la pila
+				ADD.L 	D0,PARDIR 		* Calcula la nueva dirección de lectura
+				SUB.W 	D0,PARTAM 		* Actualiza el número de caracteres leídos
+				BNE 	OTRAL 			* Si no se han leído todas los caracteres del bloque se vuelve a leer
+				
+				MOVE.W 	#30,CONTC 		* Inicializa contador de caracteres a imprimir
+				MOVE.L 	#BUFFER,PARDIR 	* Parámetro BUFFER = comienzo del buffer
+	OTRAE: 		MOVE.W 	#7,PARTAM 		* Tamaño de escritura = Tamaño de bloque
+	ESPE: 		MOVE.W 	PARTAM,-(A7) 	* Tamaño de escritura
+				MOVE.L 	#1,D0 			* Puerto B (si cogemos 0, puerto A)
+				MOVE.W 	D0,-(A7) 		* Puerto B
+				MOVE.L 	PARDIR,-(A7) 	* Dirección de escritura
+				BSR 	PRINT
+				ADD.L 	#8,A7 			* Restablece la pila
+				ADD.L 	D0,PARDIR 		* Calcula la nueva dirección del buffer
+				SUB.W 	D0,CONTC 		* Actualiza el contador de caracteres
+				BEQ 	SALIR 			* Si no quedan caracteres se acaba
+				SUB.W 	D0,PARTAM 		* Actualiza el tamaño de escritura
+				BNE 	ESPE 			* Si no se ha escrito todo el bloque se insiste
+				CMP.W 	#TAMBP,CONTC 	* Si el no de caracteres que quedan es menor que el tama~no establecido se imprime ese número
+				BHI 	OTRAE 			* Siguiente bloque
+				MOVE.W 	CONTC,PARTAM
+				BRA 	ESPE 			* Siguiente bloque
+	SALIR:		BRA 	BUCPR
+	
+				
+	BUS_ERROR: 	BREAK 					* Bus error handler
 				NOP
-	ADDRESS_ER: BREAK * Address error handler
+	ADDRESS_ER: BREAK 					* Address error handler
 				NOP
-	ILLEGAL_IN: BREAK * Illegal instruction handler
+	ILLEGAL_IN: BREAK 					* Illegal instruction handler
 				NOP
-	PRIV_VIOLT: BREAK * Privilege violation handler
+	PRIV_VIOLT: BREAK 					* Privilege violation handler
 				NOP
 				
 
