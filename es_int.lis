@@ -334,538 +334,555 @@
 00002696  4E5E                             334                  UNLK    A6
 00002698  4E75                             335                  RTS
 0000269A                                   336  
-0000269A                                   337  
-0000269A  4E56 FFF8                        338      RTI:		LINK    A6,#-8          * Creacion del marco de pila y guardado de registros utilizados por RTI
-0000269E  2D40 FFFC                        339                  MOVE.L  D0,-4(A6)
-000026A2  2D41 FFF8                        340                  MOVE.L  D1,-8(A6)
-000026A6                                   341  
-000026A6                                   342  
-000026A6                                   343  
-000026A6                                   344                  *** Deteccion de la fuente de interrupcion ***
-000026A6  1239 00EFFC0B                    345  	RTI_LOOP:	MOVE.B 	ISR,D1
-000026AC  C238 2397                        346  				AND.B	IMRCOPY,D1
-000026B0  0801 0001                        347  				BTST	#1,D1	        * Si bit 1 de IMR e ISR activos -> Recepcion A
-000026B4  6600 001E                        348  				BNE		RE_A
-000026B8  0801 0005                        349  				BTST 	#5,D1	        * Si bit 5 de IMR e ISR activos -> Rercepcion B
-000026BC  6600 0022                        350  				BNE		RE_B
-000026C0  0801 0000                        351  				BTST	#0,D1	        * Si bit 0 de IMR e ISR activos -> Transmision A
-000026C4  6600 0032                        352  				BNE		TR_A
-000026C8  0801 0004                        353  				BTST	#4,D1	        * Si bit 4 de IMR e ISR activos -> Transmision B
-000026CC  6600 0054                        354  				BNE		TR_B
-000026D0  6000 0078                        355  				BRA		RTI_END         * No se ha encontrado una interrupcion que podamos manejar
-000026D4                                   356      
-000026D4                                   357                  *** Seccion recepcion ***
-000026D4  7000                             358  	RE_A:		MOVE.L 	#0,D0           * Descriptor buffer recepcion A (0)
-000026D6  1239 00EFFC07                    359                  MOVE.B 	RBA,D1          * Direccion de linea de recepcion A ($EFFC07)
-000026DC  6000 000A                        360                  BRA     RE_AYB
-000026E0                                   361  				
-000026E0  7001                             362  	RE_B:		MOVE.L 	#1,D0           * Descriptor buffer recepcion B (1)
-000026E2  1239 00EFFC17                    363                  MOVE.B 	RBB,D1          * Direccion de linea de recepcion B ($EFFC17)
-000026E8                                   364  
-000026E8  6100 FE34                        365  	RE_AYB:		BSR 	ESCCAR
-000026EC  B0BC FFFFFFFF                    366  				CMP.L 	#-1,D0
-000026F2  6700 0056                        367  				BEQ		RTI_END	        * Si el buffer indicado esta lleno, salimos de la RTI
-000026F6  60AE                             368  				BRA     RTI_LOOP        * Si faltan caracteres por leer, realizamos otra iteracion en RTI
-000026F8                                   369  				
-000026F8                                   370                  *** Seccion transmision ***                
-000026F8  7002                             371  	TR_A:		MOVE.L 	#2,D0           * Descriptor buffer transmision A (2)
-000026FA  6100 FDC8                        372  				BSR		LEECAR
-000026FE  B0BC FFFFFFFF                    373  				CMP.L 	#-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
-00002704  6700 000A                        374  				BEQ		RESET_A
-00002708  13C0 00EFFC07                    375  				MOVE.B 	D0,TBA          * Si se ha leido caracter, lo escribimos en la linea de transmision A
-0000270E  6096                             376  				BRA 	RTI_LOOP
-00002710                                   377  		
-00002710  08B8 0000 2397                   378  	RESET_A:    BCLR	#0,IMRCOPY      * Inhibimos transmision por A
-00002716  13F8 2397 00EFFC0B               379                  MOVE.B  IMRCOPY,IMR
-0000271E  6000 002A                        380                  BRA     RTI_END 
-00002722                                   381  				
-00002722  7003                             382  	TR_B:		MOVE.L 	#3,D0           * Descriptor buffer transmision B (3)
-00002724  6100 FD9E                        383  				BSR		LEECAR          
-00002728  B0BC FFFFFFFF                    384  				CMP.L 	#-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
-0000272E  6700 000C                        385  				BEQ		RESET_B
-00002732  13C0 00EFFC17                    386  				MOVE.B 	D0,TBB          * Si se ha leido caracter, lo escribimos en la linea de transmision B
-00002738  6000 FF6C                        387  				BRA 	RTI_LOOP
-0000273C                                   388  		
-0000273C  08B8 0004 2397                   389  	RESET_B:    BCLR	#4,IMRCOPY      * Inhibimos transmision por B
-00002742  13F8 2397 00EFFC0B               390  				MOVE.B	IMRCOPY,IMR
-0000274A                                   391  				
-0000274A                                   392                  *** Seccion return ***                
-0000274A  222E FFF8                        393  	RTI_END:    MOVE.L  -8(A6),D1
-0000274E  202E FFFC                        394                  MOVE.L  -4(A6),D0
-00002752  4E5E                             395                  UNLK    A6
-00002754  4E73                             396  				RTE
-00002756                                   397  
-00002756                                   398  
-00005000                                   399      ORG $5000
-00005000                                   400  BUFFER:     DS.B    2100 * Buffer para lectura y escritura de caracteres
-00005834  00000000                         401  PARDIR:     DC.L    0 * Direcci´on que se pasa como par´ametro
-00005838  0000                             402  PARTAM:     DC.W    0 * Tama~no que se pasa como par´ametro
-0000583A  0000                             403  CONTC:      DC.W    0 * Contador de caracteres a imprimir
-0000583C  =00000000                        404  DESA:       EQU     0 * Descriptor l´ınea A
-0000583C  =00000001                        405  DESB:       EQU     1 * Descriptor l´ınea B
-0000583C  =0000001E                        406  TAMBS:      EQU     30 * Tama~no de bloque para SCAN
-0000583C  =00000007                        407  TAMBP:      EQU     7 * Tama~no de bloque para PRINT
-0000583C                                   408  * Manejadores de excepciones
-0000583C  21FC 00005914 0008               409  INICIO:     MOVE.L #BUS_ERROR,8 * Bus error handler
-00005844  21FC 00005918 000C               410              MOVE.L #ADDRESS_ER,12 * Address error handler
-0000584C  21FC 0000591C 0010               411              MOVE.L #ILLEGAL_IN,16 * Illegal instruction handler
-00005854  21FC 00005920 0020               412              MOVE.L #PRIV_VIOLT,32 * Privilege violation handler
-0000585C  21FC 0000591C 0028               413              MOVE.L #ILLEGAL_IN,40 * Illegal instruction handler
-00005864  21FC 0000591C 002C               414              MOVE.L #ILLEGAL_IN,44 * Illegal instruction handler
-0000586C                                   415  
-0000586C  6100 CB2A                        416              BSR INIT
-00005870  46FC 2000                        417              MOVE.W #$2000,SR * Permite interrupciones
-00005874                                   418  
-00005874  6000 0086                        419              BRA PR_EX_1
-00005878                                   420  
-00005878                                   421  *** Hay que escribir en el buffer A (0) el contenido que queremos tratar ***
-00005878  363C 07D0                        422              MOVE.W #2000,D3
-0000587C  3E3C 0000                        423              MOVE.W #0,D7
-00005880  6100 03FE                        424              BSR BUCESNFF
-00005884  B783                             425              EOR.L D3,D3
-00005886  BF87                             426              EOR.L D7,D7
-00005888  31FC 001E 5838                   427  BUCPR:      MOVE.W #TAMBS,PARTAM * Inicializa par´ametro de tama~no
-0000588E  21FC 00005000 5834               428              MOVE.L #BUFFER,PARDIR * Par´ametro BUFFER = comienzo del buffer
-00005896  3F38 5838                        429  OTRAL:      MOVE.W PARTAM,-(A7) * Tama~no de bloque
-0000589A  3F3C 0000                        430              MOVE.W #DESA,-(A7) * Puerto A
-0000589E  2F38 5834                        431              MOVE.L PARDIR,-(A7) * Direcci´on de lectura
-000058A2  6100 CCD0                        432  ESPL:       BSR SCAN
-000058A6  508F                             433              ADD.L #8,A7 * Restablece la pila
-000058A8  D1B8 5834                        434              ADD.L D0,PARDIR * Calcula la nueva direcci´on de lectura
-000058AC  9178 5838                        435              SUB.W D0,PARTAM * Actualiza el n´umero de caracteres le´ıdos
-000058B0  66E4                             436              BNE OTRAL * Si no se han le´ıdo todas los caracteres
-000058B2                                   437  
-000058B2                                   438              * del bloque se vuelve a leer
-000058B2  31FC 001E 583A                   439              MOVE.W #TAMBS,CONTC * Inicializa contador de caracteres a imprimir
-000058B8  21FC 00005000 5834               440              MOVE.L #BUFFER,PARDIR * Par´ametro BUFFER = comienzo del buffer
-000058C0  31FC 0007 5838                   441  OTRAE:      MOVE.W #TAMBP,PARTAM * Tama~no de escritura = Tama~no de bloque
-000058C6  3F38 5838                        442  ESPE:       MOVE.W PARTAM,-(A7) * Tama~no de escritura
-000058CA  3F3C 0001                        443              MOVE.W #DESB,-(A7) * Puerto B
-000058CE  2F38 5834                        444              MOVE.L PARDIR,-(A7) * Direcci´on de escritura
-000058D2  6100 CD1C                        445              BSR PRINT
-000058D6  508F                             446              ADD.L #8,A7 * Restablece la pila
-000058D8  D1B8 5834                        447              ADD.L D0,PARDIR * Calcula la nueva direcci´on del buffer
-000058DC  9178 583A                        448              SUB.W D0,CONTC * Actualiza el contador de caracteres
-000058E0  6700 0018                        449              BEQ SALIR * Si no quedan caracteres se acaba
-000058E4  9178 5838                        450              SUB.W D0,PARTAM * Actualiza el tama~no de escritura
-000058E8  66DC                             451              BNE ESPE * Si no se ha escrito todo el bloque se insiste
-000058EA  0C78 0007 583A                   452              CMP.W #TAMBP,CONTC * Si el no de caracteres que quedan es menor que
-000058F0                                   453              * el tama~no establecido se imprime ese n´umero
-000058F0                                   454  
-000058F0  62CE                             455              BHI OTRAE * Siguiente bloque
-000058F2  31F8 583A 5838                   456              MOVE.W CONTC,PARTAM
-000058F8  60CC                             457              BRA ESPE * Siguiente bloque
-000058FA                                   458  
-000058FA  608C                             459  SALIR:      BRA BUCPR
-000058FC                                   460  
-000058FC                                   461  PR_EX_1:
-000058FC  6100 CA9A                        462      BSR INIT
-00005900                                   463      
-00005900                                   464      * Llamada a PRINT
-00005900  3F3C 000B                        465      MOVE.W  #11,-(A7)        * Tamaño
-00005904  3F3C 0000                        466      MOVE.W  #0,-(A7)         * Descriptor
-00005908  2F3C 00005000                    467      MOVE.L  #$5000,-(A7)      * Buffer
-0000590E  6100 CCE0                        468      BSR     PRINT
-00005912  2C05                             469      MOVE.L  D5,D6
-00005914                                   470  
-00005914                                   471  BUS_ERROR:  
-00005914  4848                             472      BREAK                    * Bus error handler
-00005916  4E71                             473      NOP
-00005918                                   474  
-00005918                                   475  ADDRESS_ER:
-00005918  4848                             476      BREAK                    * Address error handler
-0000591A  4E71                             477      NOP
-0000591C                                   478  
-0000591C                                   479  ILLEGAL_IN:
-0000591C  4848                             480      BREAK                    * Illegal instruction handler
-0000591E  4E71                             481      NOP
-00005920                                   482  
-00005920                                   483  PRIV_VIOLT:
-00005920  4848                             484      BREAK                    * Priviledge violation handler
-00005922  4E71                             485      NOP
-00005924                                   486  
-00005924                                   487  
-00005924                                   488  
-00005924                                   489  PPAL: * Manejadores de excepciones
-00005924  21FC 00005914 0008               490      MOVE.L  #BUS_ERROR,8     * Bus error handler
-0000592C  21FC 00005918 000C               491      MOVE.L  #ADDRESS_ER,12   * Address error handler
-00005934  21FC 0000591C 0010               492      MOVE.L  #ILLEGAL_IN,16   * Illegal instruction handler
-0000593C  21FC 00005920 0020               493      MOVE.L  #PRIV_VIOLT,32   * Privilege Violation handler
-00005944                                   494  
-00005944  6100 CA52                        495      BSR     INIT
-00005948                                   496  
-00005948  6000 01EA                        497      BRA     p_scan_2
-0000594C                                   498  
-0000594C                                   499      *██╗  ██╗██╗████████╗ ██████╗      ██╗*
-0000594C                                   500    ***██║  ██║██║╚══██╔══╝██╔═══██╗    ███║***
-0000594C                                   501  *****███████║██║   ██║   ██║   ██║    ╚██║*****
-0000594C                                   502  *****██╔══██║██║   ██║   ██║   ██║     ██║*****
-0000594C                                   503    ***██║  ██║██║   ██║   ╚██████╔╝     ██║***
-0000594C                                   504      *╚═╝  ╚═╝╚═╝   ╚═╝    ╚═════╝      ╚═╝*
-0000594C                                   505  
-0000594C                                   506  pr02es_int:
-0000594C  7000                             507      MOVE.L #0,D0
-0000594E  7201                             508      MOVE.L #1,D1
-00005950  6100 CBCC                        509      BSR ESCCAR      * D0 tiene que ser 0
-00005954  B0BC 00000000                    510      CMP.L   #0,D0
-0000595A  6600 02DC                        511      BNE     AMENTET
-0000595E                                   512  
-0000595E                                   513  pr03es_int:
-0000595E  760A                             514      MOVE.L #10,D3
-00005960  7E01                             515      MOVE.L #1,D7
-00005962  6100 030A                        516      BSR BUCESN1S
-00005966  B0BC 00000000                    517      CMP.L   #0,D0
-0000596C  6600 02CA                        518      BNE     AMENTET
-00005970                                   519  
-00005970                                   520  pr04es_int:
-00005970  7E02                             521      MOVE.L #2,D7
-00005972  263C 0000012C                    522      MOVE.L #300,D3
-00005978  6100 0306                        523      BSR BUCESNFF
-0000597C  B0BC 00000000                    524      CMP.L   #0,D0
-00005982  6600 02B4                        525      BNE     AMENTET
-00005986                                   526  
-00005986                                   527  pr05es_int:
-00005986  263C 000007D0                    528      MOVE.L #2000,D3
-0000598C  7E03                             529      MOVE.L #3,D7
-0000598E  6100 02F0                        530      BSR BUCESNFF
-00005992  B0BC 00000000                    531      CMP.L   #0,D0
-00005998  6600 029E                        532      BNE     AMENTET
-0000599C                                   533  
-0000599C                                   534  pr06es_int:
-0000599C  263C 000007D0                    535      MOVE.L #2000,D3
-000059A2  7E03                             536      MOVE.L #3,D7
-000059A4  6100 02DA                        537      BSR BUCESNFF
-000059A8  7003                             538      MOVE.L #3,D0
-000059AA  720B                             539      MOVE.L #11,D1 * caracter 2001
-000059AC  6100 CB70                        540      BSR ESCCAR
-000059B0  B0BC FFFFFFFF                    541      CMP.L   #-1,D0
-000059B6  6600 0280                        542      BNE     AMENTET
-000059BA                                   543  
-000059BA                                   544  pr07es_int:
-000059BA  7000                             545      MOVE.L #0,D0
-000059BC  6100 CB06                        546      BSR LEECAR
-000059C0  7000                             547      MOVE.L #0,D0
-000059C2  6100 CB00                        548      BSR LEECAR
-000059C6  B0BC FFFFFFFF                    549      CMP.L   #-1,D0
-000059CC  6600 026A                        550      BNE     AMENTET
-000059D0                                   551  
-000059D0                                   552  pr08es_int:
-000059D0  263C 000000C8                    553      MOVE.L #200,D3
-000059D6  7E00                             554      MOVE.L #0,D7
-000059D8  6100 02A6                        555      BSR BUCESNFF
-000059DC  7000                             556      MOVE.L #0,D0
-000059DE  6100 CAE4                        557      BSR LEECAR
-000059E2  B0BC 00000000                    558      CMP.L #0,D0
-000059E8  6600 024E                        559      BNE     AMENTET
-000059EC                                   560  pr09es_int:
-000059EC  263C 000000C8                    561      MOVE.L #200,D3
-000059F2  7E01                             562      MOVE.L #1,D7
-000059F4  6100 028A                        563      BSR BUCESNFF
-000059F8  7E01                             564      MOVE.L #1,D7
-000059FA  760A                             565      MOVE.L #10,D3
-000059FC  6100 02CA                        566      BSR BUCLEEN
-00005A00  B0BC 00000009                    567      CMP.L #$9,D0
-00005A06  6600 0230                        568      BNE AMENTET
-00005A0A                                   569  pr10es_int:
-00005A0A  263C 0000012C                    570      MOVE.L #300,D3
-00005A10  7E02                             571      MOVE.L #2,D7
-00005A12  6100 026C                        572      BSR BUCESNFF
-00005A16  7E02                             573      MOVE.L #2,D7
-00005A18  263C 0000012C                    574      MOVE.L #300,D3
-00005A1E  6100 02A8                        575      BSR BUCLEEN
-00005A22  B0BC 0000002B                    576      CMP.L #$2B,D0
-00005A28  6600 020E                        577      BNE AMENTET
-00005A2C                                   578  pr11es_int:
-00005A2C  263C 000007D0                    579      MOVE.L #2000,D3
-00005A32  7E03                             580      MOVE.L #3,D7
-00005A34  6100 024A                        581      BSR BUCESNFF
-00005A38  7E03                             582      MOVE.L #3,D7
-00005A3A  263C 000007D0                    583      MOVE.L #2000,D3
-00005A40  6100 0286                        584      BSR BUCLEEN
-00005A44  B0BC 000000CF                    585      CMP.L #$CF,D0
-00005A4A  6600 01EC                        586      BNE AMENTET
-00005A4E                                   587  *
-00005A4E                                   588  pr12es_int:
-00005A4E  263C 00000708                    589      MOVE.L #1800,D3
-00005A54  7E00                             590      MOVE.L #0,D7
-00005A56  6100 0228                        591      BSR BUCESNFF
-00005A5A  7E00                             592      MOVE.L #0,D7
-00005A5C  7664                             593      MOVE.L #100,D3
-00005A5E  6100 0268                        594      BSR BUCLEEN
-00005A62  263C 0000012C                    595      MOVE.L #300,D3
-00005A68  7E00                             596      MOVE.L #0,D7
-00005A6A  6100 0214                        597      BSR BUCESNFF
-00005A6E  B0BC 00000000                    598      CMP.L #0,D0
-00005A74  6600 01C2                        599      BNE AMENTET
-00005A78                                   600  pr13es_int:
-00005A78  263C 000007D0                    601      MOVE.L #2000,D3
-00005A7E  7E01                             602      MOVE.L #1,D7
-00005A80  6100 01FE                        603      BSR BUCESNFF
-00005A84  7001                             604      MOVE.L #1,D0
-00005A86  7201                             605      MOVE.L #1,D1
-00005A88  6100 CA3A                        606      BSR LEECAR
-00005A8C  7602                             607      MOVE.L #2,D3
-00005A8E  7E01                             608      MOVE.L #1,D7
-00005A90  6100 01EE                        609      BSR BUCESNFF
-00005A94  B0BC FFFFFFFF                    610      CMP.L   #-1,D0
-00005A9A  6600 019C                        611      BNE     AMENTET
-00005A9E                                   612  pr14es_int:
-00005A9E  263C 000007D0                    613      MOVE.L #2000,D3
-00005AA4  7E02                             614      MOVE.L #2,D7
-00005AA6  6100 01D8                        615      BSR BUCESNFF
-00005AAA  7E02                             616      MOVE.L #2,D7
-00005AAC  760A                             617      MOVE.L #10,D3
-00005AAE  6100 0218                        618      BSR BUCLEEN
-00005AB2  760A                             619      MOVE.L #10,D3
-00005AB4  7E02                             620      MOVE.L #2,D7
-00005AB6  6100 01C8                        621      BSR BUCESNFF
-00005ABA  7E02                             622      MOVE.L #2,D7
-00005ABC  263C 000007D0                    623      MOVE.L #2000,D3
-00005AC2  6100 0204                        624      BSR BUCLEEN
-00005AC6  B0BC 00000009                    625      CMP.L #$9,D0
-00005ACC  6600 016A                        626      BNE     AMENTET
-00005AD0                                   627  pr15es_int:
-00005AD0  263C 000007D0                    628      MOVE.L #2000,D3
-00005AD6  7E03                             629      MOVE.L #3,D7
-00005AD8  6100 01A6                        630      BSR BUCESNFF
-00005ADC  7E03                             631      MOVE.L #3,D7
-00005ADE  263C 000003E8                    632      MOVE.L #1000,D3
-00005AE4  6100 01E2                        633      BSR BUCLEEN
-00005AE8  263C 000003E8                    634      MOVE.L #1000,D3
-00005AEE  7E03                             635      MOVE.L #3,D7
-00005AF0  6100 018E                        636      BSR BUCESNFF
-00005AF4  7E03                             637      MOVE.L #3,D7
-00005AF6  263C 000005DC                    638      MOVE.L #1500,D3
-00005AFC  6100 01CA                        639      BSR BUCLEEN
-00005B00  B0BC 000000F3                    640      CMP.L #$F3,D0
-00005B06  6600 0130                        641      BNE     AMENTET
-00005B0A                                   642  
-00005B0A                                   643      *███████╗ ██████╗ █████╗ ███╗   ██╗*
-00005B0A                                   644    ***██╔════╝██╔════╝██╔══██╗████╗  ██║***
-00005B0A                                   645  *****███████╗██║     ███████║██╔██╗ ██║*****
-00005B0A                                   646  *****╚════██║██║     ██╔══██║██║╚██╗██║*****
-00005B0A                                   647    ***███████║╚██████╗██║  ██║██║ ╚████║***
-00005B0A                                   648      *╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝*
-00005B0A                                   649  
-00005B0A                                   650  *** Prueba scan 1: inserta 100 caracteres en el buffer interno de recepcion de la linea A (0)
-00005B0A                                   651  *** se leen 100. Resultado esperado -> D0 = 64 (100 en hex)
-00005B0A                                   652  
-00005B0A                                   653  p_scan_1:
-00005B0A  263C 00000100                    654      MOVE.L  #$100,D3
-00005B10  7E00                             655      MOVE.L  #0,D7
-00005B12  6100 016C                        656      BSR     BUCESNFF
-00005B16  3F3C 0100                        657      MOVE.W  #$100,-(A7)
-00005B1A  3F3C 0000                        658      MOVE.W  #0,-(A7)
-00005B1E  2F3C 00005000                    659      MOVE.L  #$5000,-(A7)
-00005B24  6100 CA4E                        660      BSR     SCAN
-00005B28  508F                             661      ADD.L #8,A7 * Restablece la pila
-00005B2A  B0BC 00000100                    662      CMP.L   #$100,D0
-00005B30  6600 0106                        663      BNE     AMENTET
-00005B34                                   664  
-00005B34                                   665  *** Prueba scan 2: inserta 100 caracteres en el buffer interno de recepcion de la linea B (1)
-00005B34                                   666  *** se leen 25 caracteres 4 veces de tal manera que el buffer quede vacio. Resultado esperado:
-00005B34                                   667  *** D0 = 19 (25 en hex). Pos $50FF en memoria = pos $D01
-00005B34                                   668                                    
-00005B34                                   669  p_scan_2:
-00005B34  263C 00000094                    670              MOVE.L  #$94,D3         * 25 * 4 es 94 en hex
-00005B3A  7E01                             671              MOVE.L  #1,D7
-00005B3C  6100 0142                        672              BSR    BUCESNFF
-00005B40  7800                             673              MOVE.L  #0,D4
-00005B42  B8BC 00000004                    674  p_s_2_b:    CMP.L   #4,D4
-00005B48  6700 0024                        675              BEQ     p_s_2_e
-00005B4C  3F3C 0025                        676              MOVE.W  #$25,-(A7)
-00005B50  3F3C 0001                        677              MOVE.W  #1,-(A7)
-00005B54  2F3C 00005000                    678              MOVE.L  #$5000,-(A7)
-00005B5A  6100 CA18                        679              BSR     SCAN
-00005B5E  508F                             680              ADD.L #8,A7 * Restablece la pila
-00005B60  B0BC 00000025                    681              CMP.L   #$25,D0
-00005B66  6600 00D0                        682              BNE     AMENTET
-00005B6A  5284                             683              ADD.L   #1,D4
-00005B6C  60D4                             684              BRA     p_s_2_b
-00005B6E  2803                             685  p_s_2_e:    MOVE.L  D3,D4
-00005B70                                   686  
-00005B70                                   687  
-00005B70                                   688  *** Prueba scan 3: inserta 10 caracteres y se intenta leer 20 en el buffer interno de recepcion A (0)
-00005B70                                   689  *** El resultado esperado es 10 en D0 y guardar desde 00 hasta 09 en la posicion $5000 de memoria
-00005B70  760A                             690  p_scan_3:   MOVE.L  #10,D3
-00005B72  7E00                             691              MOVE.L  #0,D7
-00005B74  6100 010A                        692              BSR     BUCESNFF
-00005B78  3F3C 0014                        693              MOVE.W  #20,-(A7)
-00005B7C  3F3C 0000                        694              MOVE.W  #0,-(A7)
-00005B80  2F3C 00005000                    695              MOVE.L  #$5000,-(A7)
-00005B86  6100 C9EC                        696              BSR     SCAN
-00005B8A  508F                             697              ADD.L #8,A7 * Restablece la pila
-00005B8C  B0BC 0000000A                    698              CMP.L   #10,D0
-00005B92  6600 00A4                        699              BNE     AMENTET
-00005B96  2803                             700              MOVE.L  D3,D4
-00005B98                                   701  
-00005B98                                   702      *██████╗ ██████╗ ██╗███╗   ██╗████████╗*
-00005B98                                   703    ***██╔══██╗██╔══██╗██║████╗  ██║╚══██╔══╝***
-00005B98                                   704  *****██████╔╝██████╔╝██║██╔██╗ ██║   ██║   *****
-00005B98                                   705  *****██╔═══╝ ██╔══██╗██║██║╚██╗██║   ██║   *****
-00005B98                                   706    ***██║     ██║  ██║██║██║ ╚████║   ██║   ***
-00005B98                                   707      *╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝   ╚═╝   *
-00005B98                                   708  
-00005B98                                   709  *** Prueba print 1: inserta $100 caracteres en el buffer interno de transmision B (3),
-00005B98                                   710  *** estos caracteres estan contenidos a partir de la dir mem $5000.
-00005B98                                   711  
-00005B98                                   712  p_prt_1:
-00005B98  3F3C 0100                        713              MOVE.W  #$100,-(A7)
-00005B9C  3F3C 0001                        714              MOVE.W  #1,-(A7)
-00005BA0  2F3C 00005000                    715              MOVE.L  #$5000,-(A7)
-00005BA6  6100 CA48                        716              BSR     PRINT
-00005BAA  508F                             717              ADD.L #8,A7 * Restablece la pila
-00005BAC  B0BC 00000100                    718              CMP.L   #$100,D0
-00005BB2  6600 0084                        719              BNE     AMENTET
-00005BB6  2803                             720              MOVE.L  D3,D4
-00005BB8                                   721  
-00005BB8                                   722  *** Prueba print 2: inserta 2000 caracteres en el buffer interno de transmision B (3),
-00005BB8                                   723  *** estos estan contenido a partir de la dir mem $5001. Para que empiece por 1 y no por 0
-00005BB8                                   724  *** Como ya se han escrito antes $100, no se podran escribir todos, devolviendo el numero
-00005BB8                                   725  *** de caracteres escritos en D0 con valor: 6D0
-00005BB8                                   726  
-00005BB8                                   727  p_prt_2:
-00005BB8  3F3C 07D0                        728              MOVE.W  #2000,-(A7)
-00005BBC  3F3C 0001                        729              MOVE.W  #1,-(A7)
-00005BC0  2F3C 00005001                    730              MOVE.L  #$5001,-(A7)
-00005BC6  6100 CA28                        731              BSR     PRINT
-00005BCA  508F                             732              ADD.L #8,A7 * Restablece la pila
-00005BCC  B0BC 000006D0                    733              CMP.L   #$6D0,D0
-00005BD2  6600 0064                        734              BNE     AMENTET
-00005BD6  2803                             735              MOVE.L  D3,D4
-00005BD8                                   736  
-00005BD8                                   737  *** Two error cases: wrong descriptor, wrong read number
-00005BD8                                   738  p_prt_3:
-00005BD8  3F3C 07D0                        739              MOVE.W  #2000,-(A7)
-00005BDC  3F3C FFFF                        740              MOVE.W  #-1,-(A7)
-00005BE0  2F3C 00005001                    741              MOVE.L  #$5001,-(A7)
-00005BE6  6100 CA08                        742              BSR     PRINT
-00005BEA  508F                             743              ADD.L #8,A7 * Restablece la pila
-00005BEC  B0BC FFFFFFFF                    744              CMP.L   #-1,D0
-00005BF2  6600 0044                        745              BNE     AMENTET
-00005BF6  2803                             746              MOVE.L  D3,D4
-00005BF8                                   747  
-00005BF8                                   748  p_prt_4:
-00005BF8  3F3C FFFB                        749              MOVE.W  #-5,-(A7)
-00005BFC  3F3C 0001                        750              MOVE.W  #1,-(A7)
-00005C00  2F3C 00005001                    751              MOVE.L  #$5001,-(A7)
-00005C06  6100 C9E8                        752              BSR     PRINT
-00005C0A  508F                             753              ADD.L #8,A7 * Restablece la pila
-00005C0C  B0BC FFFFFFFF                    754              CMP.L   #-1,D0
-00005C12  6600 0024                        755              BNE     AMENTET
-00005C16  2803                             756              MOVE.L  D3,D4
-00005C18                                   757  
-00005C18                                   758  p_prt_5:
-00005C18  3F3C 0000                        759              MOVE.W  #0,-(A7)
-00005C1C  3F3C 0001                        760              MOVE.W  #1,-(A7)
-00005C20  2F3C 00005001                    761              MOVE.L  #$5001,-(A7)
-00005C26  6100 C9C8                        762              BSR     PRINT
-00005C2A  508F                             763              ADD.L #8,A7 * Restablece la pila
-00005C2C  B0BC 00000000                    764              CMP.L   #0,D0
-00005C32  6600 0004                        765              BNE     AMENTET
-00005C36  2803                             766              MOVE.L  D3,D4
-00005C38                                   767  
-00005C38                                   768      * █████╗ ██╗   ██╗██╗  ██╗██╗██╗     ██╗ █████╗ ██████╗ *
-00005C38                                   769    ***██╔══██╗██║   ██║╚██╗██╔╝██║██║     ██║██╔══██╗██╔══██╗***
-00005C38                                   770  *****███████║██║   ██║ ╚███╔╝ ██║██║     ██║███████║██████╔╝*****
-00005C38                                   771  *****██╔══██║██║   ██║ ██╔██╗ ██║██║     ██║██╔══██║██╔══██╗*****
-00005C38                                   772    ***██║  ██║╚██████╔╝██╔╝ ██╗██║███████╗██║██║  ██║██║  ██║***
-00005C38                                   773      *╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝*
-00005C38                                   774  
-00005C38                                   775  * La rutina AMENTET hace referencia a la diosa egipcia homonima la cual era la patrona de las puertas
-00005C38                                   776  * del inframundo en el que esperaba a los difuntos que no superaban las pruebas en su camino al paraiso.
-00005C38                                   777  * En este caso, las subrutinas que no superen las pruebas, las esperara AMENTET que para indicar su fallo
-00005C38                                   778  * y mandarlas corregir.
-00005C38                                   779  AMENTET:
-00005C38  70FF                             780              MOVE.L  #-1,D0
-00005C3A  72FF                             781              MOVE.L  #-1,D1
-00005C3C  74FF                             782              MOVE.L  #-1,D2
-00005C3E  76FF                             783              MOVE.L  #-1,D3
-00005C40  78FF                             784              MOVE.L  #-1,D4
-00005C42  7AFF                             785              MOVE.L  #-1,D5
-00005C44  7CFF                             786              MOVE.L  #-1,D6
-00005C46  7EFF                             787              MOVE.L  #-1,D7
-00005C48  207C FFFFFFFF                    788              MOVE.L  #-1,A0
-00005C4E  227C FFFFFFFF                    789              MOVE.L  #-1,A1
-00005C54  247C FFFFFFFF                    790              MOVE.L  #-1,A2
-00005C5A  267C FFFFFFFF                    791              MOVE.L  #-1,A3
-00005C60  287C FFFFFFFF                    792              MOVE.L  #-1,A4
-00005C66  2A7C FFFFFFFF                    793              MOVE.L  #-1,A5
-00005C6C  4848                             794              BREAK
-00005C6E                                   795                                                         
-00005C6E                                   796  BUCESN1S:
-00005C6E  B944                             797      EOR D4,D4 *Contador de elementos
-00005C70                                   798      buc1:
-00005C70  7201                             799          MOVE.L #1,D1 *Variable 1 que queremos meter en el buffer n veces
-00005C72  2007                             800          MOVE.L D7,D0
-00005C74  6100 C8A8                        801          BSR ESCCAR
-00005C78  5284                             802          ADD.L #1,D4
-00005C7A  B883                             803          CMP.L D3,D4
-00005C7C  66F2                             804          BNE buc1
-00005C7E  4E75                             805      RTS
-00005C80                                   806  
-00005C80                                   807  
-00005C80                                   808  
-00005C80                                   809  BUCESNFF:
-00005C80  B944                             810      EOR D4,D4
-00005C82  B341                             811      EOR D1,D1
-00005C84                                   812      buc2:
-00005C84  2007                             813          MOVE.L D7,D0
-00005C86  6100 C896                        814          BSR ESCCAR
-00005C8A  5284                             815          ADD.L #1,D4
-00005C8C  5281                             816          ADD.L #1,D1
-00005C8E  B2BC 00000100                    817          CMP.L #$100,D1
-00005C94  6700 0006                        818          BEQ D1ZERO
-00005C98  6000 0004                        819          BRA FINB1
-00005C9C  B341                             820          D1ZERO: EOR D1,D1
-00005C9E  B883                             821          FINB1: CMP.L D3,D4
-00005CA0  66E2                             822          BNE buc2
-00005CA2  4E75                             823      RTS
-00005CA4                                   824  
-00005CA4                                   825  
-00005CA4                                   826  
-00005CA4                                   827  
-00005CA4                                   828  BUCESN09:
-00005CA4  B944                             829      EOR D4,D4
-00005CA6  B341                             830      EOR D1,D1
-00005CA8                                   831      buc4:
-00005CA8  2007                             832          MOVE.L D7,D0
-00005CAA  6100 C872                        833          BSR ESCCAR
-00005CAE  5284                             834          ADD.L #1,D4
-00005CB0  5281                             835          ADD.L #1,D1
-00005CB2  B2BC 0000000A                    836          CMP.L #10,D1
-00005CB8  6700 0006                        837          BEQ D1ZERO2
-00005CBC  6000 0004                        838          BRA FINB12
-00005CC0  B341                             839          D1ZERO2: EOR D1,D1
-00005CC2  B883                             840          FINB12: CMP.L D3,D4
-00005CC4  66E2                             841          BNE buc4
-00005CC6  4E75                             842      RTS
-00005CC8                                   843  
-00005CC8                                   844  
-00005CC8                                   845  BUCLEEN:
-00005CC8  B944                             846      EOR D4,D4
-00005CCA                                   847      buc3:
-00005CCA  2007                             848          MOVE.L D7,D0
-00005CCC  6100 C7F6                        849          BSR LEECAR
-00005CD0  5284                             850          ADD.L #1,D4
-00005CD2  B883                             851          CMP.L D3,D4
-00005CD4  66F4                             852          BNE buc3
-00005CD6  4E75                             853      RTS
-00005CD8                                   854  
-00005CD8  B0BC 00000000                    855  COMPCOR: CMP.L #0,D0
-00005CDE  6700 0012                        856      BEQ BIEN
-00005CE2  6000 0018                        857      BRA MAL
-00005CE6                                   858  
-00005CE6  B07C FFFF                        859  COMPF: CMP #-1,D0
-00005CEA  6700 0006                        860      BEQ BIEN
-00005CEE  6000 000C                        861      BRA MAL
-00005CF2                                   862  
-00005CF2  2A3C ABCDEF10                    863  BIEN: MOVE.L #$abcdef10,D5
-00005CF8  6000 0004                        864      BRA FINC
-00005CFC                                   865  
-00005CFC  7AFF                             866  MAL: MOVE.L #-1,D5
-00005CFE                                   867  
-00005CFE  4848                             868  FINC: BREAK
+0000269A                                   337      *██████╗ ████████╗██╗*
+0000269A                                   338    ***██╔══██╗╚══██╔══╝██║***
+0000269A                                   339  *****██████╔╝   ██║   ██║*****
+0000269A                                   340  *****██╔══██╗   ██║   ██║*****
+0000269A                                   341    ***██║  ██║   ██║   ██║***
+0000269A                                   342      *╚═╝  ╚═╝   ╚═╝   ╚═╝*
+0000269A                                   343  
+0000269A  4E56 FFF8                        344      RTI:        LINK    A6,#-8          * Creacion del marco de pila y guardado de registros utilizados por RTI
+0000269E  2D40 FFFC                        345                  MOVE.L  D0,-4(A6)
+000026A2  2D41 FFF8                        346                  MOVE.L  D1,-8(A6)
+000026A6                                   347  
+000026A6                                   348                  *** Seccion de deteccion de la fuente de interrupcion **
+000026A6  1239 00EFFC0B                    349      RTI_LOOP:   MOVE.B  ISR,D1
+000026AC  C238 2397                        350                  AND.B   IMRCOPY,D1
+000026B0                                   351  
+000026B0  0801 0001                        352                  BTST    #1,D1           * Si bit 1 de IMR e ISR activos -> Recepcion A
+000026B4  6600 001E                        353                  BNE     RE_A
+000026B8                                   354  
+000026B8  0801 0005                        355                  BTST    #5,D1           * Si bit 5 de IMR e ISR activos -> Recepcion B
+000026BC  6600 0022                        356                  BNE     RE_B
+000026C0                                   357  
+000026C0  0801 0000                        358                  BTST    #0,D1           * Si bit 1 de IMR e ISR activos -> Recepcion A
+000026C4  6600 0032                        359                  BNE     TR_A
+000026C8                                   360  
+000026C8  0801 0004                        361                  BTST    #4,D1           * Si bit 1 de IMR e ISR activos -> Recepcion B
+000026CC  6600 0054                        362                  BNE     TR_B
+000026D0                                   363  
+000026D0  6000 0078                        364                  BRA     RTI_END         * No se ha encontrado una interrupcion que podamos manejar
+000026D4                                   365  
+000026D4                                   366                  *** Seccion recepcion **
+000026D4  7000                             367      RE_A:       MOVE.L  #0,D0           * Descriptor buffer recepcion A (0)
+000026D6  1239 00EFFC07                    368                  MOVE.B  RBA,D1          * Direccion de linea de recepcion A ($EFFC07)
+000026DC  6000 000A                        369                  BRA     RE_AYB
+000026E0                                   370  
+000026E0  7001                             371      RE_B:       MOVE.L  #1,D0           * Descriptor buffer recepcion A (1)
+000026E2  1239 00EFFC17                    372                  MOVE.B  RBB,D1          * Direccion de linea de recepcion B ($EFFC17)
+000026E8                                   373  
+000026E8  6100 FE34                        374      RE_AYB:     BSR     ESCCAR
+000026EC  B0BC FFFFFFFF                    375                  CMP.L   #-1,D0
+000026F2                                   376  *** ESTAMOS CONSUMIENDO TODOS LOS CARACTERES A PESAR DE QUE EL BUFFER ESTA LLENO ??? ***
+000026F2                                   377  *** ES POSIBLE QUE INTENTEMOS SEGUIR LEYENDO A PESAR DE QUE LA LINEA YA NO MANDE NADA ***
+000026F2  6700 0056                        378                  BEQ     RTI_END         * Si el buffer indicado esta lleno, salimos de la RTI
+000026F6  60AE                             379                  BRA     RTI_LOOP        * Si faltan caracteres por leer, realizamos otra itracion en RTI
+000026F8                                   380  
+000026F8                                   381                  *** Seccion transmision ***
+000026F8  7002                             382      TR_A:       MOVE.L  #2,D0           * Descriptor buffer transmision A (2)
+000026FA  6100 FDC8                        383                  BSR     LEECAR
+000026FE  B0BC FFFFFFFF                    384                  CMP.L   #-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
+00002704  6700 000A                        385                  BEQ     RESET_A
+00002708  13C0 00EFFC07                    386                  MOVE.B  D0,TBA          * Si se ha leido caracter, lo escribimos en la linea de transmision A
+0000270E  6096                             387                  BRA     RTI_LOOP
+00002710  08B8 0000 2397                   388      RESET_A:    BCLR    #0,IMRCOPY      * Inhibimos transmision por A
+00002716  13F8 2397 00EFFC0B               389                  MOVE.B  IMRCOPY,IMR
+0000271E  6000 002A                        390                  BRA     RTI_END
+00002722                                   391  
+00002722  7003                             392      TR_B:       MOVE.L  #3,D0           * Descriptor buffer transmision B (3)    
+00002724  6100 FD9E                        393                  BSR     LEECAR
+00002728  B0BC FFFFFFFF                    394                  CMP.L   #-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
+0000272E  6700 000C                        395                  BEQ     RESET_B
+00002732  13C0 00EFFC17                    396                  MOVE.B  D0,TBB          * Si se ha leido caracter, lo escribimos en la linea de transmision B
+00002738  6000 FF6C                        397                  BRA     RTI_LOOP
+0000273C                                   398  
+0000273C  08B8 0004 2397                   399      RESET_B:    BCLR    #4,IMRCOPY      * Inhibimos transmision por B
+00002742  13F8 2397 00EFFC0B               400                  MOVE.B  IMRCOPY,IMR
+0000274A                                   401  				
+0000274A                                   402                  *** Seccion return ***
+0000274A  222E FFF8                        403      RTI_END:    MOVE.L  -8(A6),D1
+0000274E  202E FFFC                        404                  MOVE.L  -4(A6),D0
+00002752  4E5E                             405                  UNLK    A6
+00002754  4E73                             406                  RTE
+00002756                                   407  
+00002756                                   408  
+00002756                                   409      *██████╗ ██████╗ ██╗   ██╗███████╗██████╗  █████╗ ███████╗*
+00002756                                   410    ***██╔══██╗██╔══██╗██║   ██║██╔════╝██╔══██╗██╔══██╗██╔════╝***
+00002756                                   411  *****██████╔╝██████╔╝██║   ██║█████╗  ██████╔╝███████║███████╗*****
+00002756                                   412  *****██╔═══╝ ██╔══██╗██║   ██║██╔══╝  ██╔══██╗██╔══██║╚════██║*****
+00002756                                   413    ***██║     ██║  ██║╚██████╔╝███████╗██████╔╝██║  ██║███████║***
+00002756                                   414      *╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝*
+00002756                                   415  
+00005000                                   416      ORG $5000
+00005000                                   417  BUFFER:     DS.B    2100 * Buffer para lectura y escritura de caracteres
+00005834  00000000                         418  PARDIR:     DC.L    0 * Direcci´on que se pasa como par´ametro
+00005838  0000                             419  PARTAM:     DC.W    0 * Tama~no que se pasa como par´ametro
+0000583A  0000                             420  CONTC:      DC.W    0 * Contador de caracteres a imprimir
+0000583C  =00000000                        421  DESA:       EQU     0 * Descriptor l´ınea A
+0000583C  =00000001                        422  DESB:       EQU     1 * Descriptor l´ınea B
+0000583C  =0000001E                        423  TAMBS:      EQU     30 * Tama~no de bloque para SCAN
+0000583C  =00000007                        424  TAMBP:      EQU     7 * Tama~no de bloque para PRINT
+0000583C                                   425  * Manejadores de excepciones
+0000583C  21FC 00005914 0008               426  INICIO:     MOVE.L #BUS_ERROR,8 * Bus error handler
+00005844  21FC 00005918 000C               427              MOVE.L #ADDRESS_ER,12 * Address error handler
+0000584C  21FC 0000591C 0010               428              MOVE.L #ILLEGAL_IN,16 * Illegal instruction handler
+00005854  21FC 00005920 0020               429              MOVE.L #PRIV_VIOLT,32 * Privilege violation handler
+0000585C  21FC 0000591C 0028               430              MOVE.L #ILLEGAL_IN,40 * Illegal instruction handler
+00005864  21FC 0000591C 002C               431              MOVE.L #ILLEGAL_IN,44 * Illegal instruction handler
+0000586C                                   432  
+0000586C  6100 CB2A                        433              BSR INIT
+00005870  46FC 2000                        434              MOVE.W #$2000,SR * Permite interrupciones
+00005874                                   435  
+00005874  6000 0086                        436              BRA PR_EX_1
+00005878                                   437  
+00005878                                   438  *** Hay que escribir en el buffer A (0) el contenido que queremos tratar ***
+00005878  363C 07D0                        439              MOVE.W #2000,D3
+0000587C  3E3C 0000                        440              MOVE.W #0,D7
+00005880  6100 03FE                        441              BSR BUCESNFF
+00005884  B783                             442              EOR.L D3,D3
+00005886  BF87                             443              EOR.L D7,D7
+00005888  31FC 001E 5838                   444  BUCPR:      MOVE.W #TAMBS,PARTAM * Inicializa par´ametro de tama~no
+0000588E  21FC 00005000 5834               445              MOVE.L #BUFFER,PARDIR * Par´ametro BUFFER = comienzo del buffer
+00005896  3F38 5838                        446  OTRAL:      MOVE.W PARTAM,-(A7) * Tama~no de bloque
+0000589A  3F3C 0000                        447              MOVE.W #DESA,-(A7) * Puerto A
+0000589E  2F38 5834                        448              MOVE.L PARDIR,-(A7) * Direcci´on de lectura
+000058A2  6100 CCD0                        449  ESPL:       BSR SCAN
+000058A6  508F                             450              ADD.L #8,A7 * Restablece la pila
+000058A8  D1B8 5834                        451              ADD.L D0,PARDIR * Calcula la nueva direcci´on de lectura
+000058AC  9178 5838                        452              SUB.W D0,PARTAM * Actualiza el n´umero de caracteres le´ıdos
+000058B0  66E4                             453              BNE OTRAL * Si no se han le´ıdo todas los caracteres
+000058B2                                   454  
+000058B2                                   455              * del bloque se vuelve a leer
+000058B2  31FC 001E 583A                   456              MOVE.W #TAMBS,CONTC * Inicializa contador de caracteres a imprimir
+000058B8  21FC 00005000 5834               457              MOVE.L #BUFFER,PARDIR * Par´ametro BUFFER = comienzo del buffer
+000058C0  31FC 0007 5838                   458  OTRAE:      MOVE.W #TAMBP,PARTAM * Tama~no de escritura = Tama~no de bloque
+000058C6  3F38 5838                        459  ESPE:       MOVE.W PARTAM,-(A7) * Tama~no de escritura
+000058CA  3F3C 0001                        460              MOVE.W #DESB,-(A7) * Puerto B
+000058CE  2F38 5834                        461              MOVE.L PARDIR,-(A7) * Direcci´on de escritura
+000058D2  6100 CD1C                        462              BSR PRINT
+000058D6  508F                             463              ADD.L #8,A7 * Restablece la pila
+000058D8  D1B8 5834                        464              ADD.L D0,PARDIR * Calcula la nueva direcci´on del buffer
+000058DC  9178 583A                        465              SUB.W D0,CONTC * Actualiza el contador de caracteres
+000058E0  6700 0018                        466              BEQ SALIR * Si no quedan caracteres se acaba
+000058E4  9178 5838                        467              SUB.W D0,PARTAM * Actualiza el tama~no de escritura
+000058E8  66DC                             468              BNE ESPE * Si no se ha escrito todo el bloque se insiste
+000058EA  0C78 0007 583A                   469              CMP.W #TAMBP,CONTC * Si el no de caracteres que quedan es menor que
+000058F0                                   470              * el tama~no establecido se imprime ese n´umero
+000058F0                                   471  
+000058F0  62CE                             472              BHI OTRAE * Siguiente bloque
+000058F2  31F8 583A 5838                   473              MOVE.W CONTC,PARTAM
+000058F8  60CC                             474              BRA ESPE * Siguiente bloque
+000058FA                                   475  
+000058FA  608C                             476  SALIR:      BRA BUCPR
+000058FC                                   477  
+000058FC                                   478  PR_EX_1:
+000058FC  6100 CA9A                        479      BSR INIT
+00005900                                   480      
+00005900                                   481      * Llamada a PRINT
+00005900  3F3C 000B                        482      MOVE.W  #11,-(A7)        * Tamaño
+00005904  3F3C 0000                        483      MOVE.W  #0,-(A7)         * Descriptor
+00005908  2F3C 00005000                    484      MOVE.L  #$5000,-(A7)      * Buffer
+0000590E  6100 CCE0                        485      BSR     PRINT
+00005912  2C05                             486      MOVE.L  D5,D6
+00005914                                   487  
+00005914                                   488  BUS_ERROR:  
+00005914  4848                             489      BREAK                    * Bus error handler
+00005916  4E71                             490      NOP
+00005918                                   491  
+00005918                                   492  ADDRESS_ER:
+00005918  4848                             493      BREAK                    * Address error handler
+0000591A  4E71                             494      NOP
+0000591C                                   495  
+0000591C                                   496  ILLEGAL_IN:
+0000591C  4848                             497      BREAK                    * Illegal instruction handler
+0000591E  4E71                             498      NOP
+00005920                                   499  
+00005920                                   500  PRIV_VIOLT:
+00005920  4848                             501      BREAK                    * Priviledge violation handler
+00005922  4E71                             502      NOP
+00005924                                   503  
+00005924                                   504  
+00005924                                   505  
+00005924                                   506  PPAL: * Manejadores de excepciones
+00005924  21FC 00005914 0008               507      MOVE.L  #BUS_ERROR,8     * Bus error handler
+0000592C  21FC 00005918 000C               508      MOVE.L  #ADDRESS_ER,12   * Address error handler
+00005934  21FC 0000591C 0010               509      MOVE.L  #ILLEGAL_IN,16   * Illegal instruction handler
+0000593C  21FC 00005920 0020               510      MOVE.L  #PRIV_VIOLT,32   * Privilege Violation handler
+00005944                                   511  
+00005944  6100 CA52                        512      BSR     INIT
+00005948                                   513  
+00005948  6000 01EA                        514      BRA     p_scan_2
+0000594C                                   515  
+0000594C                                   516      *██╗  ██╗██╗████████╗ ██████╗      ██╗*
+0000594C                                   517    ***██║  ██║██║╚══██╔══╝██╔═══██╗    ███║***
+0000594C                                   518  *****███████║██║   ██║   ██║   ██║    ╚██║*****
+0000594C                                   519  *****██╔══██║██║   ██║   ██║   ██║     ██║*****
+0000594C                                   520    ***██║  ██║██║   ██║   ╚██████╔╝     ██║***
+0000594C                                   521      *╚═╝  ╚═╝╚═╝   ╚═╝    ╚═════╝      ╚═╝*
+0000594C                                   522  
+0000594C                                   523  pr02es_int:
+0000594C  7000                             524      MOVE.L #0,D0
+0000594E  7201                             525      MOVE.L #1,D1
+00005950  6100 CBCC                        526      BSR ESCCAR      * D0 tiene que ser 0
+00005954  B0BC 00000000                    527      CMP.L   #0,D0
+0000595A  6600 02DC                        528      BNE     AMENTET
+0000595E                                   529  
+0000595E                                   530  pr03es_int:
+0000595E  760A                             531      MOVE.L #10,D3
+00005960  7E01                             532      MOVE.L #1,D7
+00005962  6100 030A                        533      BSR BUCESN1S
+00005966  B0BC 00000000                    534      CMP.L   #0,D0
+0000596C  6600 02CA                        535      BNE     AMENTET
+00005970                                   536  
+00005970                                   537  pr04es_int:
+00005970  7E02                             538      MOVE.L #2,D7
+00005972  263C 0000012C                    539      MOVE.L #300,D3
+00005978  6100 0306                        540      BSR BUCESNFF
+0000597C  B0BC 00000000                    541      CMP.L   #0,D0
+00005982  6600 02B4                        542      BNE     AMENTET
+00005986                                   543  
+00005986                                   544  pr05es_int:
+00005986  263C 000007D0                    545      MOVE.L #2000,D3
+0000598C  7E03                             546      MOVE.L #3,D7
+0000598E  6100 02F0                        547      BSR BUCESNFF
+00005992  B0BC 00000000                    548      CMP.L   #0,D0
+00005998  6600 029E                        549      BNE     AMENTET
+0000599C                                   550  
+0000599C                                   551  pr06es_int:
+0000599C  263C 000007D0                    552      MOVE.L #2000,D3
+000059A2  7E03                             553      MOVE.L #3,D7
+000059A4  6100 02DA                        554      BSR BUCESNFF
+000059A8  7003                             555      MOVE.L #3,D0
+000059AA  720B                             556      MOVE.L #11,D1 * caracter 2001
+000059AC  6100 CB70                        557      BSR ESCCAR
+000059B0  B0BC FFFFFFFF                    558      CMP.L   #-1,D0
+000059B6  6600 0280                        559      BNE     AMENTET
+000059BA                                   560  
+000059BA                                   561  pr07es_int:
+000059BA  7000                             562      MOVE.L #0,D0
+000059BC  6100 CB06                        563      BSR LEECAR
+000059C0  7000                             564      MOVE.L #0,D0
+000059C2  6100 CB00                        565      BSR LEECAR
+000059C6  B0BC FFFFFFFF                    566      CMP.L   #-1,D0
+000059CC  6600 026A                        567      BNE     AMENTET
+000059D0                                   568  
+000059D0                                   569  pr08es_int:
+000059D0  263C 000000C8                    570      MOVE.L #200,D3
+000059D6  7E00                             571      MOVE.L #0,D7
+000059D8  6100 02A6                        572      BSR BUCESNFF
+000059DC  7000                             573      MOVE.L #0,D0
+000059DE  6100 CAE4                        574      BSR LEECAR
+000059E2  B0BC 00000000                    575      CMP.L #0,D0
+000059E8  6600 024E                        576      BNE     AMENTET
+000059EC                                   577  pr09es_int:
+000059EC  263C 000000C8                    578      MOVE.L #200,D3
+000059F2  7E01                             579      MOVE.L #1,D7
+000059F4  6100 028A                        580      BSR BUCESNFF
+000059F8  7E01                             581      MOVE.L #1,D7
+000059FA  760A                             582      MOVE.L #10,D3
+000059FC  6100 02CA                        583      BSR BUCLEEN
+00005A00  B0BC 00000009                    584      CMP.L #$9,D0
+00005A06  6600 0230                        585      BNE AMENTET
+00005A0A                                   586  pr10es_int:
+00005A0A  263C 0000012C                    587      MOVE.L #300,D3
+00005A10  7E02                             588      MOVE.L #2,D7
+00005A12  6100 026C                        589      BSR BUCESNFF
+00005A16  7E02                             590      MOVE.L #2,D7
+00005A18  263C 0000012C                    591      MOVE.L #300,D3
+00005A1E  6100 02A8                        592      BSR BUCLEEN
+00005A22  B0BC 0000002B                    593      CMP.L #$2B,D0
+00005A28  6600 020E                        594      BNE AMENTET
+00005A2C                                   595  pr11es_int:
+00005A2C  263C 000007D0                    596      MOVE.L #2000,D3
+00005A32  7E03                             597      MOVE.L #3,D7
+00005A34  6100 024A                        598      BSR BUCESNFF
+00005A38  7E03                             599      MOVE.L #3,D7
+00005A3A  263C 000007D0                    600      MOVE.L #2000,D3
+00005A40  6100 0286                        601      BSR BUCLEEN
+00005A44  B0BC 000000CF                    602      CMP.L #$CF,D0
+00005A4A  6600 01EC                        603      BNE AMENTET
+00005A4E                                   604  *
+00005A4E                                   605  pr12es_int:
+00005A4E  263C 00000708                    606      MOVE.L #1800,D3
+00005A54  7E00                             607      MOVE.L #0,D7
+00005A56  6100 0228                        608      BSR BUCESNFF
+00005A5A  7E00                             609      MOVE.L #0,D7
+00005A5C  7664                             610      MOVE.L #100,D3
+00005A5E  6100 0268                        611      BSR BUCLEEN
+00005A62  263C 0000012C                    612      MOVE.L #300,D3
+00005A68  7E00                             613      MOVE.L #0,D7
+00005A6A  6100 0214                        614      BSR BUCESNFF
+00005A6E  B0BC 00000000                    615      CMP.L #0,D0
+00005A74  6600 01C2                        616      BNE AMENTET
+00005A78                                   617  pr13es_int:
+00005A78  263C 000007D0                    618      MOVE.L #2000,D3
+00005A7E  7E01                             619      MOVE.L #1,D7
+00005A80  6100 01FE                        620      BSR BUCESNFF
+00005A84  7001                             621      MOVE.L #1,D0
+00005A86  7201                             622      MOVE.L #1,D1
+00005A88  6100 CA3A                        623      BSR LEECAR
+00005A8C  7602                             624      MOVE.L #2,D3
+00005A8E  7E01                             625      MOVE.L #1,D7
+00005A90  6100 01EE                        626      BSR BUCESNFF
+00005A94  B0BC FFFFFFFF                    627      CMP.L   #-1,D0
+00005A9A  6600 019C                        628      BNE     AMENTET
+00005A9E                                   629  pr14es_int:
+00005A9E  263C 000007D0                    630      MOVE.L #2000,D3
+00005AA4  7E02                             631      MOVE.L #2,D7
+00005AA6  6100 01D8                        632      BSR BUCESNFF
+00005AAA  7E02                             633      MOVE.L #2,D7
+00005AAC  760A                             634      MOVE.L #10,D3
+00005AAE  6100 0218                        635      BSR BUCLEEN
+00005AB2  760A                             636      MOVE.L #10,D3
+00005AB4  7E02                             637      MOVE.L #2,D7
+00005AB6  6100 01C8                        638      BSR BUCESNFF
+00005ABA  7E02                             639      MOVE.L #2,D7
+00005ABC  263C 000007D0                    640      MOVE.L #2000,D3
+00005AC2  6100 0204                        641      BSR BUCLEEN
+00005AC6  B0BC 00000009                    642      CMP.L #$9,D0
+00005ACC  6600 016A                        643      BNE     AMENTET
+00005AD0                                   644  pr15es_int:
+00005AD0  263C 000007D0                    645      MOVE.L #2000,D3
+00005AD6  7E03                             646      MOVE.L #3,D7
+00005AD8  6100 01A6                        647      BSR BUCESNFF
+00005ADC  7E03                             648      MOVE.L #3,D7
+00005ADE  263C 000003E8                    649      MOVE.L #1000,D3
+00005AE4  6100 01E2                        650      BSR BUCLEEN
+00005AE8  263C 000003E8                    651      MOVE.L #1000,D3
+00005AEE  7E03                             652      MOVE.L #3,D7
+00005AF0  6100 018E                        653      BSR BUCESNFF
+00005AF4  7E03                             654      MOVE.L #3,D7
+00005AF6  263C 000005DC                    655      MOVE.L #1500,D3
+00005AFC  6100 01CA                        656      BSR BUCLEEN
+00005B00  B0BC 000000F3                    657      CMP.L #$F3,D0
+00005B06  6600 0130                        658      BNE     AMENTET
+00005B0A                                   659  
+00005B0A                                   660      *███████╗ ██████╗ █████╗ ███╗   ██╗*
+00005B0A                                   661    ***██╔════╝██╔════╝██╔══██╗████╗  ██║***
+00005B0A                                   662  *****███████╗██║     ███████║██╔██╗ ██║*****
+00005B0A                                   663  *****╚════██║██║     ██╔══██║██║╚██╗██║*****
+00005B0A                                   664    ***███████║╚██████╗██║  ██║██║ ╚████║***
+00005B0A                                   665      *╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝*
+00005B0A                                   666  
+00005B0A                                   667  *** Prueba scan 1: inserta 100 caracteres en el buffer interno de recepcion de la linea A (0)
+00005B0A                                   668  *** se leen 100. Resultado esperado -> D0 = 64 (100 en hex)
+00005B0A                                   669  
+00005B0A                                   670  p_scan_1:
+00005B0A  263C 00000100                    671      MOVE.L  #$100,D3
+00005B10  7E00                             672      MOVE.L  #0,D7
+00005B12  6100 016C                        673      BSR     BUCESNFF
+00005B16  3F3C 0100                        674      MOVE.W  #$100,-(A7)
+00005B1A  3F3C 0000                        675      MOVE.W  #0,-(A7)
+00005B1E  2F3C 00005000                    676      MOVE.L  #$5000,-(A7)
+00005B24  6100 CA4E                        677      BSR     SCAN
+00005B28  508F                             678      ADD.L #8,A7 * Restablece la pila
+00005B2A  B0BC 00000100                    679      CMP.L   #$100,D0
+00005B30  6600 0106                        680      BNE     AMENTET
+00005B34                                   681  
+00005B34                                   682  *** Prueba scan 2: inserta 100 caracteres en el buffer interno de recepcion de la linea B (1)
+00005B34                                   683  *** se leen 25 caracteres 4 veces de tal manera que el buffer quede vacio. Resultado esperado:
+00005B34                                   684  *** D0 = 19 (25 en hex). Pos $50FF en memoria = pos $D01
+00005B34                                   685                                    
+00005B34                                   686  p_scan_2:
+00005B34  263C 00000094                    687              MOVE.L  #$94,D3         * 25 * 4 es 94 en hex
+00005B3A  7E01                             688              MOVE.L  #1,D7
+00005B3C  6100 0142                        689              BSR    BUCESNFF
+00005B40  7800                             690              MOVE.L  #0,D4
+00005B42  B8BC 00000004                    691  p_s_2_b:    CMP.L   #4,D4
+00005B48  6700 0024                        692              BEQ     p_s_2_e
+00005B4C  3F3C 0025                        693              MOVE.W  #$25,-(A7)
+00005B50  3F3C 0001                        694              MOVE.W  #1,-(A7)
+00005B54  2F3C 00005000                    695              MOVE.L  #$5000,-(A7)
+00005B5A  6100 CA18                        696              BSR     SCAN
+00005B5E  508F                             697              ADD.L #8,A7 * Restablece la pila
+00005B60  B0BC 00000025                    698              CMP.L   #$25,D0
+00005B66  6600 00D0                        699              BNE     AMENTET
+00005B6A  5284                             700              ADD.L   #1,D4
+00005B6C  60D4                             701              BRA     p_s_2_b
+00005B6E  2803                             702  p_s_2_e:    MOVE.L  D3,D4
+00005B70                                   703  
+00005B70                                   704  
+00005B70                                   705  *** Prueba scan 3: inserta 10 caracteres y se intenta leer 20 en el buffer interno de recepcion A (0)
+00005B70                                   706  *** El resultado esperado es 10 en D0 y guardar desde 00 hasta 09 en la posicion $5000 de memoria
+00005B70  760A                             707  p_scan_3:   MOVE.L  #10,D3
+00005B72  7E00                             708              MOVE.L  #0,D7
+00005B74  6100 010A                        709              BSR     BUCESNFF
+00005B78  3F3C 0014                        710              MOVE.W  #20,-(A7)
+00005B7C  3F3C 0000                        711              MOVE.W  #0,-(A7)
+00005B80  2F3C 00005000                    712              MOVE.L  #$5000,-(A7)
+00005B86  6100 C9EC                        713              BSR     SCAN
+00005B8A  508F                             714              ADD.L #8,A7 * Restablece la pila
+00005B8C  B0BC 0000000A                    715              CMP.L   #10,D0
+00005B92  6600 00A4                        716              BNE     AMENTET
+00005B96  2803                             717              MOVE.L  D3,D4
+00005B98                                   718  
+00005B98                                   719      *██████╗ ██████╗ ██╗███╗   ██╗████████╗*
+00005B98                                   720    ***██╔══██╗██╔══██╗██║████╗  ██║╚══██╔══╝***
+00005B98                                   721  *****██████╔╝██████╔╝██║██╔██╗ ██║   ██║   *****
+00005B98                                   722  *****██╔═══╝ ██╔══██╗██║██║╚██╗██║   ██║   *****
+00005B98                                   723    ***██║     ██║  ██║██║██║ ╚████║   ██║   ***
+00005B98                                   724      *╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝   ╚═╝   *
+00005B98                                   725  
+00005B98                                   726  *** Prueba print 1: inserta $100 caracteres en el buffer interno de transmision B (3),
+00005B98                                   727  *** estos caracteres estan contenidos a partir de la dir mem $5000.
+00005B98                                   728  
+00005B98                                   729  p_prt_1:
+00005B98  3F3C 0100                        730              MOVE.W  #$100,-(A7)
+00005B9C  3F3C 0001                        731              MOVE.W  #1,-(A7)
+00005BA0  2F3C 00005000                    732              MOVE.L  #$5000,-(A7)
+00005BA6  6100 CA48                        733              BSR     PRINT
+00005BAA  508F                             734              ADD.L #8,A7 * Restablece la pila
+00005BAC  B0BC 00000100                    735              CMP.L   #$100,D0
+00005BB2  6600 0084                        736              BNE     AMENTET
+00005BB6  2803                             737              MOVE.L  D3,D4
+00005BB8                                   738  
+00005BB8                                   739  *** Prueba print 2: inserta 2000 caracteres en el buffer interno de transmision B (3),
+00005BB8                                   740  *** estos estan contenido a partir de la dir mem $5001. Para que empiece por 1 y no por 0
+00005BB8                                   741  *** Como ya se han escrito antes $100, no se podran escribir todos, devolviendo el numero
+00005BB8                                   742  *** de caracteres escritos en D0 con valor: 6D0
+00005BB8                                   743  
+00005BB8                                   744  p_prt_2:
+00005BB8  3F3C 07D0                        745              MOVE.W  #2000,-(A7)
+00005BBC  3F3C 0001                        746              MOVE.W  #1,-(A7)
+00005BC0  2F3C 00005001                    747              MOVE.L  #$5001,-(A7)
+00005BC6  6100 CA28                        748              BSR     PRINT
+00005BCA  508F                             749              ADD.L #8,A7 * Restablece la pila
+00005BCC  B0BC 000006D0                    750              CMP.L   #$6D0,D0
+00005BD2  6600 0064                        751              BNE     AMENTET
+00005BD6  2803                             752              MOVE.L  D3,D4
+00005BD8                                   753  
+00005BD8                                   754  *** Two error cases: wrong descriptor, wrong read number
+00005BD8                                   755  p_prt_3:
+00005BD8  3F3C 07D0                        756              MOVE.W  #2000,-(A7)
+00005BDC  3F3C FFFF                        757              MOVE.W  #-1,-(A7)
+00005BE0  2F3C 00005001                    758              MOVE.L  #$5001,-(A7)
+00005BE6  6100 CA08                        759              BSR     PRINT
+00005BEA  508F                             760              ADD.L #8,A7 * Restablece la pila
+00005BEC  B0BC FFFFFFFF                    761              CMP.L   #-1,D0
+00005BF2  6600 0044                        762              BNE     AMENTET
+00005BF6  2803                             763              MOVE.L  D3,D4
+00005BF8                                   764  
+00005BF8                                   765  p_prt_4:
+00005BF8  3F3C FFFB                        766              MOVE.W  #-5,-(A7)
+00005BFC  3F3C 0001                        767              MOVE.W  #1,-(A7)
+00005C00  2F3C 00005001                    768              MOVE.L  #$5001,-(A7)
+00005C06  6100 C9E8                        769              BSR     PRINT
+00005C0A  508F                             770              ADD.L #8,A7 * Restablece la pila
+00005C0C  B0BC FFFFFFFF                    771              CMP.L   #-1,D0
+00005C12  6600 0024                        772              BNE     AMENTET
+00005C16  2803                             773              MOVE.L  D3,D4
+00005C18                                   774  
+00005C18                                   775  p_prt_5:
+00005C18  3F3C 0000                        776              MOVE.W  #0,-(A7)
+00005C1C  3F3C 0001                        777              MOVE.W  #1,-(A7)
+00005C20  2F3C 00005001                    778              MOVE.L  #$5001,-(A7)
+00005C26  6100 C9C8                        779              BSR     PRINT
+00005C2A  508F                             780              ADD.L #8,A7 * Restablece la pila
+00005C2C  B0BC 00000000                    781              CMP.L   #0,D0
+00005C32  6600 0004                        782              BNE     AMENTET
+00005C36  2803                             783              MOVE.L  D3,D4
+00005C38                                   784  
+00005C38                                   785      * █████╗ ██╗   ██╗██╗  ██╗██╗██╗     ██╗ █████╗ ██████╗ *
+00005C38                                   786    ***██╔══██╗██║   ██║╚██╗██╔╝██║██║     ██║██╔══██╗██╔══██╗***
+00005C38                                   787  *****███████║██║   ██║ ╚███╔╝ ██║██║     ██║███████║██████╔╝*****
+00005C38                                   788  *****██╔══██║██║   ██║ ██╔██╗ ██║██║     ██║██╔══██║██╔══██╗*****
+00005C38                                   789    ***██║  ██║╚██████╔╝██╔╝ ██╗██║███████╗██║██║  ██║██║  ██║***
+00005C38                                   790      *╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝╚══════╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝*
+00005C38                                   791  
+00005C38                                   792  * La rutina AMENTET hace referencia a la diosa egipcia homonima la cual era la patrona de las puertas
+00005C38                                   793  * del inframundo en el que esperaba a los difuntos que no superaban las pruebas en su camino al paraiso.
+00005C38                                   794  * En este caso, las subrutinas que no superen las pruebas, las esperara AMENTET que para indicar su fallo
+00005C38                                   795  * y mandarlas corregir.
+00005C38                                   796  AMENTET:
+00005C38  70FF                             797              MOVE.L  #-1,D0
+00005C3A  72FF                             798              MOVE.L  #-1,D1
+00005C3C  74FF                             799              MOVE.L  #-1,D2
+00005C3E  76FF                             800              MOVE.L  #-1,D3
+00005C40  78FF                             801              MOVE.L  #-1,D4
+00005C42  7AFF                             802              MOVE.L  #-1,D5
+00005C44  7CFF                             803              MOVE.L  #-1,D6
+00005C46  7EFF                             804              MOVE.L  #-1,D7
+00005C48  207C FFFFFFFF                    805              MOVE.L  #-1,A0
+00005C4E  227C FFFFFFFF                    806              MOVE.L  #-1,A1
+00005C54  247C FFFFFFFF                    807              MOVE.L  #-1,A2
+00005C5A  267C FFFFFFFF                    808              MOVE.L  #-1,A3
+00005C60  287C FFFFFFFF                    809              MOVE.L  #-1,A4
+00005C66  2A7C FFFFFFFF                    810              MOVE.L  #-1,A5
+00005C6C  4848                             811              BREAK
+00005C6E                                   812                                                         
+00005C6E                                   813  BUCESN1S:
+00005C6E  B944                             814      EOR D4,D4 *Contador de elementos
+00005C70                                   815      buc1:
+00005C70  7201                             816          MOVE.L #1,D1 *Variable 1 que queremos meter en el buffer n veces
+00005C72  2007                             817          MOVE.L D7,D0
+00005C74  6100 C8A8                        818          BSR ESCCAR
+00005C78  5284                             819          ADD.L #1,D4
+00005C7A  B883                             820          CMP.L D3,D4
+00005C7C  66F2                             821          BNE buc1
+00005C7E  4E75                             822      RTS
+00005C80                                   823  
+00005C80                                   824  
+00005C80                                   825  
+00005C80                                   826  BUCESNFF:
+00005C80  B944                             827      EOR D4,D4
+00005C82  B341                             828      EOR D1,D1
+00005C84                                   829      buc2:
+00005C84  2007                             830          MOVE.L D7,D0
+00005C86  6100 C896                        831          BSR ESCCAR
+00005C8A  5284                             832          ADD.L #1,D4
+00005C8C  5281                             833          ADD.L #1,D1
+00005C8E  B2BC 00000100                    834          CMP.L #$100,D1
+00005C94  6700 0006                        835          BEQ D1ZERO
+00005C98  6000 0004                        836          BRA FINB1
+00005C9C  B341                             837          D1ZERO: EOR D1,D1
+00005C9E  B883                             838          FINB1: CMP.L D3,D4
+00005CA0  66E2                             839          BNE buc2
+00005CA2  4E75                             840      RTS
+00005CA4                                   841  
+00005CA4                                   842  
+00005CA4                                   843  
+00005CA4                                   844  
+00005CA4                                   845  BUCESN09:
+00005CA4  B944                             846      EOR D4,D4
+00005CA6  B341                             847      EOR D1,D1
+00005CA8                                   848      buc4:
+00005CA8  2007                             849          MOVE.L D7,D0
+00005CAA  6100 C872                        850          BSR ESCCAR
+00005CAE  5284                             851          ADD.L #1,D4
+00005CB0  5281                             852          ADD.L #1,D1
+00005CB2  B2BC 0000000A                    853          CMP.L #10,D1
+00005CB8  6700 0006                        854          BEQ D1ZERO2
+00005CBC  6000 0004                        855          BRA FINB12
+00005CC0  B341                             856          D1ZERO2: EOR D1,D1
+00005CC2  B883                             857          FINB12: CMP.L D3,D4
+00005CC4  66E2                             858          BNE buc4
+00005CC6  4E75                             859      RTS
+00005CC8                                   860  
+00005CC8                                   861  
+00005CC8                                   862  BUCLEEN:
+00005CC8  B944                             863      EOR D4,D4
+00005CCA                                   864      buc3:
+00005CCA  2007                             865          MOVE.L D7,D0
+00005CCC  6100 C7F6                        866          BSR LEECAR
+00005CD0  5284                             867          ADD.L #1,D4
+00005CD2  B883                             868          CMP.L D3,D4
+00005CD4  66F4                             869          BNE buc3
+00005CD6  4E75                             870      RTS
+00005CD8                                   871  
+00005CD8  B0BC 00000000                    872  COMPCOR: CMP.L #0,D0
+00005CDE  6700 0012                        873      BEQ BIEN
+00005CE2  6000 0018                        874      BRA MAL
+00005CE6                                   875  
+00005CE6  B07C FFFF                        876  COMPF: CMP #-1,D0
+00005CEA  6700 0006                        877      BEQ BIEN
+00005CEE  6000 000C                        878      BRA MAL
+00005CF2                                   879  
+00005CF2  2A3C ABCDEF10                    880  BIEN: MOVE.L #$abcdef10,D5
+00005CF8  6000 0004                        881      BRA FINC
+00005CFC                                   882  
+00005CFC  7AFF                             883  MAL: MOVE.L #-1,D5
+00005CFE                                   884  
+00005CFE  4848                             885  FINC: BREAK
 
 No errors detected
 No warnings generated

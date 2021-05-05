@@ -334,67 +334,84 @@ IVR		EQU		$EFFC19
                 UNLK    A6
                 RTS
 
+    *██████╗ ████████╗██╗*
+  ***██╔══██╗╚══██╔══╝██║***
+*****██████╔╝   ██║   ██║*****
+*****██╔══██╗   ██║   ██║*****
+  ***██║  ██║   ██║   ██║***
+    *╚═╝  ╚═╝   ╚═╝   ╚═╝*
 
-    RTI:		LINK    A6,#-8          * Creacion del marco de pila y guardado de registros utilizados por RTI
+    RTI:        LINK    A6,#-8          * Creacion del marco de pila y guardado de registros utilizados por RTI
                 MOVE.L  D0,-4(A6)
                 MOVE.L  D1,-8(A6)
 
+                *** Seccion de deteccion de la fuente de interrupcion **
+    RTI_LOOP:   MOVE.B  ISR,D1
+                AND.B   IMRCOPY,D1
 
+                BTST    #1,D1           * Si bit 1 de IMR e ISR activos -> Recepcion A
+                BNE     RE_A
 
-                *** Deteccion de la fuente de interrupcion ***
-	RTI_LOOP:	MOVE.B 	ISR,D1
-				AND.B	IMRCOPY,D1
-				BTST	#1,D1	        * Si bit 1 de IMR e ISR activos -> Recepcion A
-				BNE		RE_A
-				BTST 	#5,D1	        * Si bit 5 de IMR e ISR activos -> Rercepcion B
-				BNE		RE_B
-				BTST	#0,D1	        * Si bit 0 de IMR e ISR activos -> Transmision A
-				BNE		TR_A
-				BTST	#4,D1	        * Si bit 4 de IMR e ISR activos -> Transmision B
-				BNE		TR_B
-				BRA		RTI_END         * No se ha encontrado una interrupcion que podamos manejar
-    
-                *** Seccion recepcion ***
-	RE_A:		MOVE.L 	#0,D0           * Descriptor buffer recepcion A (0)
-                MOVE.B 	RBA,D1          * Direccion de linea de recepcion A ($EFFC07)
+                BTST    #5,D1           * Si bit 5 de IMR e ISR activos -> Recepcion B
+                BNE     RE_B
+
+                BTST    #0,D1           * Si bit 1 de IMR e ISR activos -> Recepcion A
+                BNE     TR_A
+
+                BTST    #4,D1           * Si bit 1 de IMR e ISR activos -> Recepcion B
+                BNE     TR_B
+
+                BRA     RTI_END         * No se ha encontrado una interrupcion que podamos manejar
+
+                *** Seccion recepcion **
+    RE_A:       MOVE.L  #0,D0           * Descriptor buffer recepcion A (0)
+                MOVE.B  RBA,D1          * Direccion de linea de recepcion A ($EFFC07)
                 BRA     RE_AYB
-				
-	RE_B:		MOVE.L 	#1,D0           * Descriptor buffer recepcion B (1)
-                MOVE.B 	RBB,D1          * Direccion de linea de recepcion B ($EFFC17)
 
-	RE_AYB:		BSR 	ESCCAR
-				CMP.L 	#-1,D0
-				BEQ		RTI_END	        * Si el buffer indicado esta lleno, salimos de la RTI
-				BRA     RTI_LOOP        * Si faltan caracteres por leer, realizamos otra iteracion en RTI
-				
-                *** Seccion transmision ***                
-	TR_A:		MOVE.L 	#2,D0           * Descriptor buffer transmision A (2)
-				BSR		LEECAR
-				CMP.L 	#-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
-				BEQ		RESET_A
-				MOVE.B 	D0,TBA          * Si se ha leido caracter, lo escribimos en la linea de transmision A
-				BRA 	RTI_LOOP
-		
-	RESET_A:    BCLR	#0,IMRCOPY      * Inhibimos transmision por A
+    RE_B:       MOVE.L  #1,D0           * Descriptor buffer recepcion A (1)
+                MOVE.B  RBB,D1          * Direccion de linea de recepcion B ($EFFC17)
+
+    RE_AYB:     BSR     ESCCAR
+                CMP.L   #-1,D0
+*** ESTAMOS CONSUMIENDO TODOS LOS CARACTERES A PESAR DE QUE EL BUFFER ESTA LLENO ??? ***
+*** ES POSIBLE QUE INTENTEMOS SEGUIR LEYENDO A PESAR DE QUE LA LINEA YA NO MANDE NADA ***
+                BEQ     RTI_END         * Si el buffer indicado esta lleno, salimos de la RTI
+                BRA     RTI_LOOP        * Si faltan caracteres por leer, realizamos otra itracion en RTI
+
+                *** Seccion transmision ***
+    TR_A:       MOVE.L  #2,D0           * Descriptor buffer transmision A (2)
+                BSR     LEECAR
+                CMP.L   #-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
+                BEQ     RESET_A
+                MOVE.B  D0,TBA          * Si se ha leido caracter, lo escribimos en la linea de transmision A
+                BRA     RTI_LOOP
+    RESET_A:    BCLR    #0,IMRCOPY      * Inhibimos transmision por A
                 MOVE.B  IMRCOPY,IMR
-                BRA     RTI_END 
+                BRA     RTI_END
+
+    TR_B:       MOVE.L  #3,D0           * Descriptor buffer transmision B (3)    
+                BSR     LEECAR
+                CMP.L   #-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
+                BEQ     RESET_B
+                MOVE.B  D0,TBB          * Si se ha leido caracter, lo escribimos en la linea de transmision B
+                BRA     RTI_LOOP
+
+    RESET_B:    BCLR    #4,IMRCOPY      * Inhibimos transmision por B
+                MOVE.B  IMRCOPY,IMR
 				
-	TR_B:		MOVE.L 	#3,D0           * Descriptor buffer transmision B (3)
-				BSR		LEECAR          
-				CMP.L 	#-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
-				BEQ		RESET_B
-				MOVE.B 	D0,TBB          * Si se ha leido caracter, lo escribimos en la linea de transmision B
-				BRA 	RTI_LOOP
-		
-	RESET_B:    BCLR	#4,IMRCOPY      * Inhibimos transmision por B
-				MOVE.B	IMRCOPY,IMR
-				
-                *** Seccion return ***                
-	RTI_END:    MOVE.L  -8(A6),D1
+                *** Seccion return ***
+    RTI_END:    MOVE.L  -8(A6),D1
                 MOVE.L  -4(A6),D0
                 UNLK    A6
-				RTE
+                RTE
 
+
+    *██████╗ ██████╗ ██╗   ██╗███████╗██████╗  █████╗ ███████╗*
+  ***██╔══██╗██╔══██╗██║   ██║██╔════╝██╔══██╗██╔══██╗██╔════╝***
+*****██████╔╝██████╔╝██║   ██║█████╗  ██████╔╝███████║███████╗*****
+*****██╔═══╝ ██╔══██╗██║   ██║██╔══╝  ██╔══██╗██╔══██║╚════██║*****
+  ***██║     ██║  ██║╚██████╔╝███████╗██████╔╝██║  ██║███████║***
+    *╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝*
 
     ORG $5000
 BUFFER:     DS.B    2100 * Buffer para lectura y escritura de caracteres
