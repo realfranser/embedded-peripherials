@@ -316,8 +316,9 @@ IVR		EQU		$EFFC19
                 * Si multiplicamos 4 por el descriptor de entrada (0 e 1) tenemos el bit que deseamos de IMR
                 MOVE.W  12(A6),D2
                 MULU    #4,D2
-                BSET    D2,IMR
+                MOVE.B  IMRCOPY,D1
                 BSET    D2,IMRCOPY           
+                MOVE.B  IMRCOPY,IMR     * Habilitamos transmision por linea correspondiente
                 MOVE.W  D0,SR           * Restauramos SR (status register)
 
                 *** Seccion return ***
@@ -332,17 +333,70 @@ IVR		EQU		$EFFC19
                 MOVE.L  -4(A6),A0
                 UNLK    A6
                 RTS
-              
-    *██████╗ ████████╗██╗*
-  ***██╔══██╗╚══██╔══╝██║***
-*****██████╔╝   ██║   ██║*****
-*****██╔══██╗   ██║   ██║*****
-  ***██║  ██║   ██║   ██║***
-    *╚═╝  ╚═╝   ╚═╝   ╚═╝*
-                    
-    RTI:    RTE
 
 
+    RTI:		LINK    A6,#-8          * Creacion del marco de pila y guardado de registros utilizados por RTI
+                MOVE.L  D0,-4(A6)
+                MOVE.L  D1,-8(A6)
+
+
+
+                *** Deteccion de la fuente de interrupcion ***
+	RTI_LOOP:	MOVE.B 	ISR,D1
+				AND.B	IMRCOPY,D1
+				BTST	#1,D1	        * Si bit 1 de IMR e ISR activos -> Recepcion A
+				BNE		RE_A
+				BTST 	#5,D1	        * Si bit 5 de IMR e ISR activos -> Rercepcion B
+				BNE		RE_B
+				BTST	#0,D1	        * Si bit 0 de IMR e ISR activos -> Transmision A
+				BNE		TR_A
+				BTST	#4,D1	        * Si bit 4 de IMR e ISR activos -> Transmision B
+				BNE		TR_B
+				BRA		RTI_END         * No se ha encontrado una interrupcion que podamos manejar
+    
+                *** Seccion recepcion ***
+	RE_A:		MOVE.L 	#0,D0           * Descriptor buffer recepcion A (0)
+                MOVE.B 	RBA,D1          * Direccion de linea de recepcion A ($EFFC07)
+                BRA     RE_AYB
+				
+	RE_B:		MOVE.L 	#1,D0           * Descriptor buffer recepcion B (1)
+                MOVE.B 	RBB,D1          * Direccion de linea de recepcion B ($EFFC17)
+
+	RE_AYB:		BSR 	ESCCAR
+				CMP.L 	#-1,D0
+				BEQ		RTI_END	        * Si el buffer indicado esta lleno, salimos de la RTI
+				BRA     RTI_LOOP        * Si faltan caracteres por leer, realizamos otra iteracion en RTI
+				
+                *** Seccion transmision ***                
+	TR_A:		MOVE.L 	#2,D0           * Descriptor buffer transmision A (2)
+				BSR		LEECAR
+				CMP.L 	#-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
+				BEQ		RESET_A
+				MOVE.B 	D0,TBA          * Si se ha leido caracter, lo escribimos en la linea de transmision A
+				BRA 	RTI_LOOP
+		
+	RESET_A:    BCLR	#0,IMRCOPY      * Inhibimos transmision por A
+                MOVE.B  IMRCOPY,IMR
+                BRA     RTI_END 
+				
+	TR_B:		MOVE.L 	#3,D0           * Descriptor buffer transmision B (3)
+				BSR		LEECAR          
+				CMP.L 	#-1,D0          * Si el buffer indicado esta vacio, reseteamos IMR y salimos de la RTI
+				BEQ		RESET_B
+				MOVE.B 	D0,TBB          * Si se ha leido caracter, lo escribimos en la linea de transmision B
+				BRA 	RTI_LOOP
+		
+	RESET_B:    BCLR	#4,IMRCOPY      * Inhibimos transmision por B
+				MOVE.B	IMRCOPY,IMR
+				
+                *** Seccion return ***                
+	RTI_END:    MOVE.L  -8(A6),D1
+                MOVE.L  -4(A6),D0
+                UNLK    A6
+				RTE
+
+
+    ORG $5000
 BUFFER:     DS.B    2100 * Buffer para lectura y escritura de caracteres
 PARDIR:     DC.L    0 * Direcci´on que se pasa como par´ametro
 PARTAM:     DC.W    0 * Tama~no que se pasa como par´ametro
@@ -360,7 +414,9 @@ INICIO:     MOVE.L #BUS_ERROR,8 * Bus error handler
             MOVE.L #ILLEGAL_IN,44 * Illegal instruction handler
 
             BSR INIT
-            *MOVE.W #$2000,SR * Permite interrupciones
+            MOVE.W #$2000,SR * Permite interrupciones
+
+            BRA PR_EX_1
 
 *** Hay que escribir en el buffer A (0) el contenido que queremos tratar ***
             MOVE.W #2000,D3
@@ -402,6 +458,16 @@ ESPE:       MOVE.W PARTAM,-(A7) * Tama~no de escritura
 
 SALIR:      BRA BUCPR
 
+PR_EX_1:
+    BSR INIT
+    
+    * Llamada a PRINT
+    MOVE.W  #11,-(A7)        * Tamaño
+    MOVE.W  #0,-(A7)         * Descriptor
+    MOVE.L  #$5000,-(A7)      * Buffer
+    BSR     PRINT
+    MOVE.L  D5,D6
+
 BUS_ERROR:  
     BREAK                    * Bus error handler
     NOP
@@ -437,64 +503,34 @@ PPAL: * Manejadores de excepciones
   ***██║  ██║██║   ██║   ╚██████╔╝     ██║***
     *╚═╝  ╚═╝╚═╝   ╚═╝    ╚═════╝      ╚═╝*
 
-*** Prueba 2: Llamada a ESCCAR introduciendo un caracter en el buffer de recepción de la línea A (0)
-***
-*************************************************************************************************************************
-**
 pr02es_int:
     MOVE.L #0,D0
     MOVE.L #1,D1
     BSR ESCCAR      * D0 tiene que ser 0
     CMP.L   #0,D0
     BNE     AMENTET
-   *BRA COMPCOR
-************************************************************************************************************************
-*
-** Prueba 3: Se escriben 10 caracteres en el buffer de recepción de la linea B(1) (10 llamadas a ESCCAR).
-**
-************************************************************************************************************************
-*
+
 pr03es_int:
     MOVE.L #10,D3
     MOVE.L #1,D7
     BSR BUCESN1S
     CMP.L   #0,D0
     BNE     AMENTET
-   *BRA COMPCOR
-   *BRA COMPCOR    * D0 tiene que ser 0
-************************************************************************************************************************
-*
-** Prueba 4: Se escriben 300 caracteresen el buffer de transmisión de la linea A (2) (300 llamadas a ESCCAR).
-**
-************************************************************************************************************************
-*
+
 pr04es_int:
     MOVE.L #2,D7
     MOVE.L #300,D3
     BSR BUCESNFF
     CMP.L   #0,D0
     BNE     AMENTET
-   *BRA COMPCOR
-   *BRA COMPCOR    * D0 tiene que ser 0
-************************************************************************************************************************
-*
-** Prueba 5: Se escriben 2000 caracteresen el buffer de transmisión de la linea B (3) (2000 llamadas a ESCCAR).
-**
-************************************************************************************************************************
-*
+
 pr05es_int:
     MOVE.L #2000,D3
     MOVE.L #3,D7
     BSR BUCESNFF
     CMP.L   #0,D0
     BNE     AMENTET
-   *BRA COMPCOR
-   *BRA COMPCOR    * D0 tiene que ser 0
-************************************************************************************************************************
-*
-** Prueba 6: Se escriben más de 2000 caracteresen el buffer de transmisión de la linea B (3) (2001 llamadas a ESCCAR). ***
-************************************************************************************************************************
-*
+
 pr06es_int:
     MOVE.L #2000,D3
     MOVE.L #3,D7
@@ -504,14 +540,7 @@ pr06es_int:
     BSR ESCCAR
     CMP.L   #-1,D0
     BNE     AMENTET
-   *BRA COMPCOR
-    *BRA COMPF      * D0 tiene que ser -1
-************************************************************************************************************************
-*
-** Prueba 7: Se prueba a leer un caracter de un buffer vacío (LEECAR buffer recepcion línea A)
-****
-************************************************************************************************************************
-*
+
 pr07es_int:
     MOVE.L #0,D0
     BSR LEECAR
@@ -519,13 +548,7 @@ pr07es_int:
     BSR LEECAR
     CMP.L   #-1,D0
     BNE     AMENTET
-   *BRA COMPF      * D0 tiene que ser -1 
-************************************************************************************************************************
-*
-** Prueba 8: Se prueba a leer un caracter con 200 escritos en el buffer (LEECAR buffer recepcion línea A(0))
-**
-************************************************************************************************************************
-*
+
 pr08es_int:
     MOVE.L #200,D3
     MOVE.L #0,D7
@@ -534,12 +557,6 @@ pr08es_int:
     BSR LEECAR
     CMP.L #0,D0
     BNE     AMENTET
-************************************************************************************************************************
-*
-** Prueba 9: Se prueba a leer 10 caracteres con 300 escritos en el buffer (LEECAR buffer recepcion línea B(1))
-**
-************************************************************************************************************************
-*
 pr09es_int:
     MOVE.L #200,D3
     MOVE.L #1,D7
@@ -549,11 +566,6 @@ pr09es_int:
     BSR BUCLEEN
     CMP.L #$9,D0
     BNE AMENTET
-************************************************************************************************************************
-*
-** Prueba 10: Se prueba a leer 300 caracteres con 300 escritos en el buffer (LEECAR buffer transmisión línea A(2)) ***
-************************************************************************************************************************
-*
 pr10es_int:
     MOVE.L #300,D3
     MOVE.L #2,D7
@@ -563,13 +575,6 @@ pr10es_int:
     BSR BUCLEEN
     CMP.L #$2B,D0
     BNE AMENTET
-************************************************************************************************************************
-*
-** Prueba 11: Se realiza la inserción de 2000 caracteres en el buffer interno de transmisión de la linea B(3) llamando ***
-** sucesivamente a ESCCAR. A continuación se leen 2000 caracteres de dicho buffer llamando a LEECAR
-**
-************************************************************************************************************************
-*
 pr11es_int:
     MOVE.L #2000,D3
     MOVE.L #3,D7
@@ -579,16 +584,6 @@ pr11es_int:
     BSR BUCLEEN
     CMP.L #$CF,D0
     BNE AMENTET
-************************************************************************************************************************
-*
-************************************************************************************************************************
-*
-** Prueba 12: Se realiza la inserción de 1800 caracteres en el buffer interno de recepcion de la linea A(0) llamando ***
-** sucesivamente a ESCCAR. A continuación se leen 100 caracteres de dicho buffer llamando a LEECAR y se vuelven a
-**
-** insertar 300 caracteres.
-**
-************************************************************************************************************************
 *
 pr12es_int:
     MOVE.L #1800,D3
@@ -602,15 +597,6 @@ pr12es_int:
     BSR BUCESNFF
     CMP.L #0,D0
     BNE AMENTET
-   * BRA COMPCOR       *D0 tiene que ser 0
-************************************************************************************************************************
-*
-** Prueba 13: Se realiza la inserción de 2000 caracteres en el buffer interno de recepcion de la linea B(1) llamando ***
-** sucesivamente a ESCCAR. A continuación se lee 1 caracter de dicho buffer llamando a LEECAR y se vuelven a insertar ***
-** 2 caracteres.
-**
-************************************************************************************************************************
-*
 pr13es_int:
     MOVE.L #2000,D3
     MOVE.L #1,D7
@@ -623,15 +609,6 @@ pr13es_int:
     BSR BUCESNFF
     CMP.L   #-1,D0
     BNE     AMENTET
-************************************************************************************************************************
-*
-** Prueba 14: Se realiza la inserción de 2000 caracteres en el buffer interno de transmisión de la linea A(2) llamando ***
-** sucesivamente a ESCCAR. A continuación se lee 10 caracteres de dicho buffer llamando a LEECAR y se vuelven a
-**
-** insertar 10 caracteres y por último se vuelven a leer 2000.
-**
-************************************************************************************************************************
-*
 pr14es_int:
     MOVE.L #2000,D3
     MOVE.L #2,D7
@@ -647,14 +624,6 @@ pr14es_int:
     BSR BUCLEEN
     CMP.L #$9,D0
     BNE     AMENTET
-************************************************************************************************************************
-*
-** Prueba 15: Se realiza la inserción de 2000 caracteres en el buffer interno de transmisión de la linea B(3) llamando ***
-** sucesivamente a ESCCAR. A continuación se leen 1000 caracteres de dicho buffer llamando a LEECAR y se vuelven a ***
-** insertar 1000 caracteres y por último se vuelven a leer 1500.
-**
-************************************************************************************************************************
-*
 pr15es_int:
     MOVE.L #2000,D3
     MOVE.L #3,D7
@@ -670,8 +639,6 @@ pr15es_int:
     BSR BUCLEEN
     CMP.L #$F3,D0
     BNE     AMENTET
-*    MOVE.L #-1,D5
-*    BRA FINC
 
     *███████╗ ██████╗ █████╗ ███╗   ██╗*
   ***██╔════╝██╔════╝██╔══██╗████╗  ██║***
@@ -826,19 +793,6 @@ AMENTET:
             MOVE.L  #-1,A5
             BREAK
                                                        
-*************************************************************************************************************************
-*****
-*** Funcionamiento de los bucles:
-***
-*** -D7 es el buffer que queremos usar: D7={0,1,2,3}, por lo tanto hay que hacer un MOVE.L #X,D7, donde x es el buffer ***
-*** -La variable n es D3, por lo tanto si queremos meter 200 numeros por ejemplo hay que hacer MOVE.L #200,D3
-***
-*************************************************************************************************************************
-*****
-*************************************************************************************************************************
-*****
-*** Este bucle llama a ESCCAR n veces rellenando el buffer todo con unos
-***
 BUCESN1S:
     EOR D4,D4 *Contador de elementos
     buc1:
@@ -852,12 +806,6 @@ BUCESN1S:
 
 
 
-*************************************************************************************************************************
-*****
-*************************************************************************************************************************
-*****
-*** Este bucle llama a ESCCAR n veces rellenando el buffer todo con números desde 0 al FF en hexadecimal
-***
 BUCESNFF:
     EOR D4,D4
     EOR D1,D1
@@ -877,12 +825,6 @@ BUCESNFF:
 
 
 
-*************************************************************************************************************************
-*****
-*************************************************************************************************************************
-*****
-*** Este bucle llama a ESCCAR n veces rellenando el buffer todo con números desde 0 al 9 en hexadecimal
-***
 BUCESN09:
     EOR D4,D4
     EOR D1,D1
@@ -900,9 +842,6 @@ BUCESN09:
     RTS
 
 
-*************************************************************************************************************************
-*** Este bucle llama a LEECAR n veces
-***
 BUCLEEN:
     EOR D4,D4
     buc3:
