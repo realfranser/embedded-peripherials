@@ -25,7 +25,41 @@
 
 
 ## Indice
-Aqui va el indice
+
+- [Proyecto Entrada/Salida](#proyecto-de-arquitectura-de-computadores-sistemas-de-entrada/salida)
+  * [Informacion](#informacion)
+  * [Autores](#autores)
+  * [Indice](#indice)
+  * [Aspectos generales](#aspectos-generales)
+  * [Diagrama de flujo](#diagrama-de-flujo)
+  * [Subrutinas](#subrutinas)
+    + [LEECAR](#leecar)
+      - [Parametros de entrada](#parametros-de-entrada)
+      - [Descripcion](#descripcion)
+      - [Parametros de salida](#parametros-de-salida)
+    + [ESCCAR](#esccar)
+      - [Parametros de entrada](#parametros-de-entrada-1)
+      - [Descripcion](#descripcion-1)
+      - [Parametros de salida](#parametros-de-salida-1)
+    + [INIT](#init)
+      - [Descripcion](#descripcion-2)
+    + [SCAN](#scan)
+      - [Parametros de entrada](#parametros-de-entrada-2)
+      - [Descripcion](#descripcion-3)
+      - [Parametros de salida](#parametros-de-salida-2)
+    + [PRINT](#print)
+      - [Parametros de entrada](#parametros-de-entrada-3)
+      - [Descripcion](#descripcion-4)
+      - [Parametros de salida](#parametros-de-salida-3)
+    + [RTI](#rti)
+      - [Descripcion](#descripcion-5)
+  * [Casos de prueba](#casos-de-prueba)
+    + [AMENTET](#amentet)
+    + [Hito](#hito)
+    + [SCAN y PRINT](#scan-y-print)
+    + [RTI](#rti-1)
+  * [Observaciones finales](#observaciones-finales)
+    + [ASCII Fonts](#ascii-fonts)
 
 
 ## Aspectos generales
@@ -202,6 +236,34 @@ Si la interrupcion es de transmision, indica que la linea esta preparada para tr
 **Situaciones especiales:** en caso de que el buffer de recepcion este lleno, adivinando este hecho debido a que ESCCAR nos devolvera el valor #-1 en D0. El proceso a seguir es leer el caractere de la linea de recepcion pero no escribirlo, de esta manera este caracter sera deshechado.
 
 En el caso de que la interrupcion de transmision a la hora de leer un caracter con el uso de la subrutina LEECAR devuelva un #-1, esto significara que no hay mas caracteres que mandar a la linea de transmision seleccionada. El procedimiento a seguir es dehabilitar las interrupciones de transmision para la linea que la interrumpio en el registro IMR.
+
+
+## Casos de prueba
+
+A continuacion vamos a describir el conjunto de casos de prueba utilizados para la depuracion y el testing de las subrutinas descritas en el apartado anterior y asegurar su correcto funcionamiento, cumpliendo con las especificaciones indicadas en el manual del proyecto.
+
+### AMENTET
+
+Se ha desarrollado una subrutina principal desde la que se controla y notifica los errores que puedan surgir a la hora de probar las subrutinas. Esta subrutina la hemos denominado "Amentet" haciendo referencia a la diosa egipcia que decidia si un muerto pasaba al paraiso o al infierno tras su larga travesia por el rio. Analogamente, esta subrutina detecta si algun caso ha sido erroneo, y de ser asi, guarda en todos los registros el valor $FFFFFFFF, de este modo se analiza de forma visual el error generado en los tests.
+</br></br>
+
+### Hito
+
+Los primeros casos de prueba que se desarrollaron fueron los relacionados con las subrutinas LEECAR y ESCCAR, las cuales estan incluidas en el hito evaluable del proyecto. En estos casos de prueba se testeaba desde los casos mas esenciales como puede ser leer o escribir un caracter, hasta casos mas particulares como puede ser, leer caracteres de un buffer vacio, o escribir caracteres en un buffer lleno. Con este conjunto de pruebas se comprobaba que nuestas subrutinas eran capaces de reaccionar de forma adecuada ante los errores o posibles problemas que puedan derivarse desde las subrutinas llamantes.
+</br></br>
+
+### SCAN y PRINT
+
+Posteriormente se desarrollaron los casos de prueba para las subrutinas SCAN y PRINT. Para el desarrollo de estas pruebas era necesario haber testeado previamente el correcto funcionamiento de las subrutinas LEECAR y ESCCAR ya que se llamaba a estas para guardar caracteres en algun buffer o a partir de alguna direccion de memoria especifica. Para ambas subrutinas ademas de comprobar el funcionamiento basico como extraccion o insercion de varios caracteres, se comprobo que el funcionamiento fuera adecuado para los casos limite. Estos casos son, por ejemplo, descriptor de buffer incorrecto, numero de caracteres negativo, direccion de memoria no valida. A su vez se analizaba que tanto PRINT como SCAN interpretaran bien la recepcion del valor #-1 y asegurando que en ese instante no se leian ni escribian mas caracteres. A su vez se analizo que en ningun caso se superase el numero de caracteres a leer o escribir que los indicados por el parametro de entrada "tamano" de ambas subrutinas.
+</br></br>
+
+### RTI
+
+Por ultimo se hizo el desarrollo del programa principal que probase el correcto funcionamiento de la subrutina RTI en conjunto con el resto de las subrutinas. Para ello se establecian parametros inciales como tamanos de recepcion y transmision o destino en memoria donde guardar determinados caracteres. El algoritmo de esta rutina principal es similar al descrito en el apartado de diagrama de flujo. Para el correcto funcionamiento de esta rutina, era necesario habilitar las interrupciones. Esto se logra guardando el valor $2000 el registro SR. La recepcion y transmision de las lineas A y B se realizaba editando los ficheros puertoa y puertob con el comando odt -x "nombre fichero".
+
+
+## Observaciones finales
+
 
 
 ### ASCII Fonts
