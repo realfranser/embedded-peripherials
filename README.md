@@ -96,7 +96,7 @@
 
 </br></br>
 
-![alt text](./Assets/global_diagram.svg)
+![alt text](./Memoria/Assets/global_diagram.svg)
 
 <p style="text-align: center;">Figura 1: Diagrama de flujo</p>
 
