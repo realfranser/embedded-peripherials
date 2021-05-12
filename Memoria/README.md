@@ -14,7 +14,7 @@
 | Curso         | 2020/21
 | Asignatura     | Arquitectura de Computadores
 | Curso		 | 2º Curso
-| Semestre    | 5º Semestre
+| Semestre    | 4º Semestre
 | Proyecto    | Proyecto Entrada/Salida
 <br><br>
 
@@ -26,7 +26,7 @@
 
 ## Indice
 
-- [Proyecto Entrada/Salida](#proyecto-de-arquitectura-de-computadores-sistemas-de-entrada/salida)
+- [Proyecto de Arquitectura de Computadores](#informacion)
   * [Informacion](#informacion)
   * [Autores](#autores)
   * [Indice](#indice)
@@ -59,8 +59,13 @@
     + [SCAN y PRINT](#scan-y-print)
     + [RTI](#rti-1)
   * [Observaciones finales](#observaciones-finales)
+    + [Tabla de tiempos](#tabla-de-tiempos)
+  * [Extras](#extras)
     + [ASCII Fonts](#ascii-fonts)
+    + [VSCode](#vscode)
+    + [Plugin M68K](#plugin-m68k)
 
+<br><br><br><br><br><br>
 
 ## Aspectos generales
 
@@ -74,6 +79,7 @@
 </br>
 <div style="text-align: justify">Por ultimo aclarar ciertos detalles del proyecto. En primer lugar, se empieza la codificacion a partir de la direccion de memoria $400 y el puntero de pila es descendente y comienza en la direccion $8000. A su vez, la direccion para almacenar datos en memoria para las pruebas es la $5000 y es creciente. Los bufferes internos ocupan 2017 (2000 B de datos, 1 B burbuja, 16 B punteros), estos bufferes estan comprendidos entre las posiciones $410 y $2397. Por ultimo aclarar que se hace una copia del IMR denominada IMRCOPY debido a que no se puede leer directamente de este, y las direcciones de las lineas a y b son EFFC07 y EFFC17 respectivamente.</div>
 
+<br><br><br>
 
 ## Diagrama de flujo
 <div style="text-align: justify">En primer lugar, el programa principal llama a la subrutina INIT, desde la cual se inicializaran todos los valores necesarios para el correcto funcionamiento del programa. Alguno de estos valores son: vector de interrupcion, velocidad de transmision y recepcion, inhibicion de las interrupciones, IMR y desactivacion del eco. A su vez se inicializan los punteros tanto del vector de buffers "BUFF_V" como de los bufferes en si con sus respectivos punteros para asegurar su correcto funcionamiento circular.</div>
@@ -94,6 +100,7 @@
 
 <p style="text-align: center;">Figura 1: Diagrama de flujo</p>
 
+<br><br>
 
 ## Subrutinas
 
@@ -116,8 +123,7 @@ En esta seccion se mencionara el funcionamiento de las diferentes subrutinas des
 <br><br>
 
 #### Descripcion
-
-La rutina leecar extrae un caracter del buffer interno indicado en el parametro de entrada buffer descrito anteriormente. Si dicho buffer esta vacio, la funcion devolvera a modo de error el valor #-1 y el buffer no se vera alterado. En caso de que el buffer tenga caractereres, se extraera el primer caracter moviendo el puntero de extraccion una posicion y almacenando dicho caracter en el registro D0
+<div style="text-align: justify">La rutina leecar extrae un caracter del buffer interno indicado en el parametro de entrada buffer descrito anteriormente. Si dicho buffer esta vacio, la funcion devolvera a modo de error el valor #-1 y el buffer no se vera alterado. En caso de que el buffer tenga caractereres, se extraera el primer caracter moviendo el puntero de extraccion una posicion y almacenando dicho caracter en el registro D0.</div>
 
 #### Parametros de salida
 | Parametro | Caracter |
@@ -143,7 +149,7 @@ La rutina leecar extrae un caracter del buffer interno indicado en el parametro 
 
 #### Descripcion
 
-La rutina esccar inserta el caracter del segundo parametro en el buffer indicado por el primero. Se hace una comprobacion de la disponibilidad del buffer y en caso de que este lleno, se devuelve un #-1 como signo de error y el buffer no se vera alterado. En caso de que haya espacio en el buffer para insertar caracteres, este se insertara en la posicion indicada por el puntero de insercion del buffer en cuestion y se devolvera 0 en D0 a la subritina llamante.
+<div style="text-align: justify">La rutina esccar inserta el caracter del segundo parametro en el buffer indicado por el primero. Se hace una comprobacion de la disponibilidad del buffer y en caso de que este lleno, se devuelve un #-1 como signo de error y el buffer no se vera alterado. En caso de que haya espacio en el buffer para insertar caracteres, este se insertara en la posicion indicada por el puntero de insercion del buffer en cuestion y se devolvera 0 en D0 a la subritina llamante.</div>
 
 #### Parametros de salida
 | Parametro | Caracter |
@@ -158,9 +164,9 @@ La rutina esccar inserta el caracter del segundo parametro en el buffer indicado
 
 #### Descripcion
 
-La subrituna init no cuenta con parametros de entrada ni de salida, su funcion es preparar las lineas A y B para la transmision y recepcion de caracteres mediante E/S por interrupciones. Los parametros de inicializacion de la subrutina son: 8 bits por caracter para ambas lineas, no activar eco en ninguna de las lineas, solicitar una interrupcion cada vez que llegue un caracter, velocidad de transmision y recepcion de 38400 bits/s, funcionamiento FUll Duplex, vector de interrupcion $40, habilitar las interrupciones de recepcion de las lineas en la mascara de interrupcion, actualizar la direccion de la rutina de tratamiento de interrupcion en la tabla de vectores de interrupcion y por ultimo no olvidar realizar la copia de IMR dado que no se puede leer de este valor.
+<div style="text-align: justify">La subrituna init no cuenta con parametros de entrada ni de salida, su funcion es preparar las lineas A y B para la transmision y recepcion de caracteres mediante E/S por interrupciones. Los parametros de inicializacion de la subrutina son: 8 bits por caracter para ambas lineas, no activar eco en ninguna de las lineas, solicitar una interrupcion cada vez que llegue un caracter, velocidad de transmision y recepcion de 38400 bits/s, funcionamiento FUll Duplex, vector de interrupcion $40, habilitar las interrupciones de recepcion de las lineas en la mascara de interrupcion, actualizar la direccion de la rutina de tratamiento de interrupcion en la tabla de vectores de interrupcion y por ultimo no olvidar realizar la copia de IMR dado que no se puede leer de este valor.</dib>
 </br>
-En el caso particular de nuestra practica, ademas de los elementos indicados anteriormente habra que inicializar el vector de bufferes (BUFF_V) con la direccion de memoria de los 4 bufferes y en cada uno de estos bufferes hay que inicializar los 4 diferentes punteros: el de insercion, extraccion, inicio y fin. Siendo los dos ultimos meramente una simplificacion del proceso de debugging pero no tienen un impacto significativo en el codigo.
+<div style="text-align: justify">En el caso particular de nuestra practica, ademas de los elementos indicados anteriormente habra que inicializar el vector de bufferes (BUFF_V) con la direccion de memoria de los 4 bufferes y en cada uno de estos bufferes hay que inicializar los 4 diferentes punteros: el de insercion, extraccion, inicio y fin. Siendo los dos ultimos meramente una simplificacion del proceso de debugging pero no tienen un impacto significativo en el codigo.</div>
 
 
 ### SCAN
@@ -178,7 +184,7 @@ En el caso particular de nuestra practica, ademas de los elementos indicados ant
 
 #### Descripcion
 
-Scan lee un bloque de caracteres de una linea (A o B), esta lectura se realiza de forma no bloqueante de tal manera que "elimina" los caracteres leidos de las lineas haciendo uso de la funcion LEECAR a la que llama recursivamente hasta leer el numero de caracteres indicado en el tercer parametro de la subrutina. A su vez se hace el conteo de caracteres leidos en D0. Es importante asegurar que no suceden problemas de concurrencia como puede ser la lectura multiple del mismo caracter.
+<div style="text-align: justify">Scan lee un bloque de caracteres de una linea (A o B), esta lectura se realiza de forma no bloqueante de tal manera que "elimina" los caracteres leidos de las lineas haciendo uso de la funcion LEECAR a la que llama recursivamente hasta leer el numero de caracteres indicado en el tercer parametro de la subrutina. A su vez se hace el conteo de caracteres leidos en D0. Es importante asegurar que no suceden problemas de concurrencia como puede ser la lectura multiple del mismo caracter.</div>
 
 #### Parametros de salida
 
@@ -205,9 +211,9 @@ Scan lee un bloque de caracteres de una linea (A o B), esta lectura se realiza d
 
 #### Descripcion
 
-Print escribe en el buffer interno indicado el numero de caracteres indicados en el parametro tamano, contenidos en el buffer que se pasa como primer parametro. La escritura se realiza de forma no bloqueante activando de forma adecuada la transmision de caracteres si interferir con otras. La copia de los caracteres se realiza mediante la invocacion recursiva a la funcion ESCCAR el numero de veces indicado por tamano o hasta que el buffer ESCCAR se llene.
+<div style="text-align: justify">Print escribe en el buffer interno indicado el numero de caracteres indicados en el parametro tamano, contenidos en el buffer que se pasa como primer parametro. La escritura se realiza de forma no bloqueante activando de forma adecuada la transmision de caracteres si interferir con otras. La copia de los caracteres se realiza mediante la invocacion recursiva a la funcion ESCCAR el numero de veces indicado por tamano o hasta que el buffer ESCCAR se llene.</div>
 </br>
-En esta subrutina es crucial comprender el funcionamiento de los diferentes registros y variables que maneja la DUART. En nuestro caso, la seccion del mutex, la cual comienza a partir de la etiqueta PR_MTX (print mutex) se encarga de solicitar la interrupcion de forma que no cause problemas de concurrencia. Para ello salvamos el valor del SR (status register), inhibimos las interrupciones guardando el valor $2700 en SR, activamos el bit de la IMR indicado (0 en caso de tratarse de la linea A y 4 para la linea B) y finalmente restauramos el valor anterior del SR, saltando asi al tratado de la interrupcion que se detalla en le siguiente subrutina, RTI.
+<div style="text-align: justify">En esta subrutina es crucial comprender el funcionamiento de los diferentes registros y variables que maneja la DUART. En nuestro caso, la seccion del mutex, la cual comienza a partir de la etiqueta PR_MTX (print mutex) se encarga de solicitar la interrupcion de forma que no cause problemas de concurrencia. Para ello salvamos el valor del SR (status register), inhibimos las interrupciones guardando el valor $2700 en SR, activamos el bit de la IMR indicado (0 en caso de tratarse de la linea A y 4 para la linea B) y finalmente restauramos el valor anterior del SR, saltando asi al tratado de la interrupcion que se detalla en le siguiente subrutina, RTI.</div>
 
 #### Parametros de salida
 
@@ -223,10 +229,12 @@ En esta subrutina es crucial comprender el funcionamiento de los diferentes regi
 
 #### Descripcion
 
-El proceso de la rutina del tratamiento de interrupcion esta definido en los siguientes pasos:
+<div style="text-align: justify">El proceso de la rutina del tratamiento de interrupcion esta definido en los siguientes pasos:
 
-**Identificacion de la fuente de interrupcion:** debido a que el MC68681 activa una misma senal de interrupcion para las cuatro condiciones posibles, esta subrutina debe identificar cual de las cuatro posibles condiciones ha generado la solicitud de interrupcion. Para ello, hacemos la operacion AND sobre los registros ISR e IMR y de esta manera se comprueba que bits estan activados en ambos registros. De ahi saltamos al tratamiento de la interrupcion identificada o finalizamos la subrutina al no haber identificado una interrupcion que atane a las lineas de recepcion o transmision A o B. 
+**Identificacion de la fuente de interrupcion:** debido a que el MC68681 activa una misma senal de interrupcion para las cuatro condiciones posibles, esta subrutina debe identificar cual de las cuatro posibles condiciones ha generado la solicitud de interrupcion. Para ello, hacemos la operacion AND sobre los registros ISR e IMR y de esta manera se comprueba que bits estan activados en ambos registros. De ahi saltamos al tratamiento de la interrupcion identificada o finalizamos la subrutina al no haber identificado una interrupcion que atane a las lineas de recepcion o transmision A o B.</div>
 </br>
+
+<div style="text-align: justify">
 
 **Tratamiento de la interrupcion:** si la interrupcion es de recepcion, esto significa que la cola FIFO de recepcion de la linea no esta vacia. Por ello, se debe guardar el caracter de esta linea en el buffer de recepcion correspondiente (buffers 0 o 1 en nuestro buffer vector). Destacar el uso de ESCCAR para poder escribir en los bufferes internos los caracteres desde las lineas de transmision.
 
@@ -235,40 +243,78 @@ Si la interrupcion es de transmision, indica que la linea esta preparada para tr
 
 **Situaciones especiales:** en caso de que el buffer de recepcion este lleno, adivinando este hecho debido a que ESCCAR nos devolvera el valor #-1 en D0. El proceso a seguir es leer el caractere de la linea de recepcion pero no escribirlo, de esta manera este caracter sera deshechado.
 
-En el caso de que la interrupcion de transmision a la hora de leer un caracter con el uso de la subrutina LEECAR devuelva un #-1, esto significara que no hay mas caracteres que mandar a la linea de transmision seleccionada. El procedimiento a seguir es dehabilitar las interrupciones de transmision para la linea que la interrumpio en el registro IMR.
+En el caso de que la interrupcion de transmision a la hora de leer un caracter con el uso de la subrutina LEECAR devuelva un #-1, esto significara que no hay mas caracteres que mandar a la linea de transmision seleccionada. El procedimiento a seguir es dehabilitar las interrupciones de transmision para la linea que la interrumpio en el registro IMR.</div>
 
+<br>
 
 ## Casos de prueba
 
-A continuacion vamos a describir el conjunto de casos de prueba utilizados para la depuracion y el testing de las subrutinas descritas en el apartado anterior y asegurar su correcto funcionamiento, cumpliendo con las especificaciones indicadas en el manual del proyecto.
+<div style="text-align: justify">A continuacion vamos a describir el conjunto de casos de prueba utilizados para la depuracion y el testing de las subrutinas descritas en el apartado anterior y asegurar su correcto funcionamiento, cumpliendo con las especificaciones indicadas en el manual del proyecto.</div>
 
 ### AMENTET
 
-Se ha desarrollado una subrutina principal desde la que se controla y notifica los errores que puedan surgir a la hora de probar las subrutinas. Esta subrutina la hemos denominado "Amentet" haciendo referencia a la diosa egipcia que decidia si un muerto pasaba al paraiso o al infierno tras su larga travesia por el rio. Analogamente, esta subrutina detecta si algun caso ha sido erroneo, y de ser asi, guarda en todos los registros el valor $FFFFFFFF, de este modo se analiza de forma visual el error generado en los tests.
+<div style="text-align: justify">Se ha desarrollado una subrutina principal desde la que se controla y notifica los errores que puedan surgir a la hora de probar las subrutinas. Esta subrutina la hemos denominado "Amentet" haciendo referencia a la diosa egipcia que decidia si un muerto pasaba al paraiso o al infierno tras su larga travesia por el rio. Analogamente, esta subrutina detecta si algun caso ha sido erroneo, y de ser asi, guarda en todos los registros el valor $FFFFFFFF, de este modo se analiza de forma visual el error generado en los tests.</div>
 </br></br>
 
 ### Hito
 
-Los primeros casos de prueba que se desarrollaron fueron los relacionados con las subrutinas LEECAR y ESCCAR, las cuales estan incluidas en el hito evaluable del proyecto. En estos casos de prueba se testeaba desde los casos mas esenciales como puede ser leer o escribir un caracter, hasta casos mas particulares como puede ser, leer caracteres de un buffer vacio, o escribir caracteres en un buffer lleno. Con este conjunto de pruebas se comprobaba que nuestas subrutinas eran capaces de reaccionar de forma adecuada ante los errores o posibles problemas que puedan derivarse desde las subrutinas llamantes.
+<div style="text-align: justify">Los primeros casos de prueba que se desarrollaron fueron los relacionados con las subrutinas LEECAR y ESCCAR, las cuales estan incluidas en el hito evaluable del proyecto. En estos casos de prueba se testeaba desde los casos mas esenciales como puede ser leer o escribir un caracter, hasta casos mas particulares como puede ser, leer caracteres de un buffer vacio, o escribir caracteres en un buffer lleno. Con este conjunto de pruebas se comprobaba que nuestas subrutinas eran capaces de reaccionar de forma adecuada ante los errores o posibles problemas que puedan derivarse desde las subrutinas llamantes.</div>
 </br></br>
 
 ### SCAN y PRINT
 
-Posteriormente se desarrollaron los casos de prueba para las subrutinas SCAN y PRINT. Para el desarrollo de estas pruebas era necesario haber testeado previamente el correcto funcionamiento de las subrutinas LEECAR y ESCCAR ya que se llamaba a estas para guardar caracteres en algun buffer o a partir de alguna direccion de memoria especifica. Para ambas subrutinas ademas de comprobar el funcionamiento basico como extraccion o insercion de varios caracteres, se comprobo que el funcionamiento fuera adecuado para los casos limite. Estos casos son, por ejemplo, descriptor de buffer incorrecto, numero de caracteres negativo, direccion de memoria no valida. A su vez se analizaba que tanto PRINT como SCAN interpretaran bien la recepcion del valor #-1 y asegurando que en ese instante no se leian ni escribian mas caracteres. A su vez se analizo que en ningun caso se superase el numero de caracteres a leer o escribir que los indicados por el parametro de entrada "tamano" de ambas subrutinas.
+<div style="text-align: justify">Posteriormente se desarrollaron los casos de prueba para las subrutinas SCAN y PRINT. Para el desarrollo de estas pruebas era necesario haber testeado previamente el correcto funcionamiento de las subrutinas LEECAR y ESCCAR ya que se llamaba a estas para guardar caracteres en algun buffer o a partir de alguna direccion de memoria especifica. Para ambas subrutinas ademas de comprobar el funcionamiento basico como extraccion o insercion de varios caracteres, se comprobo que el funcionamiento fuera adecuado para los casos limite. Estos casos son, por ejemplo, descriptor de buffer incorrecto, numero de caracteres negativo, direccion de memoria no valida. A su vez se analizaba que tanto PRINT como SCAN interpretaran bien la recepcion del valor #-1 y asegurando que en ese instante no se leian ni escribian mas caracteres. A su vez se analizo que en ningun caso se superase el numero de caracteres a leer o escribir que los indicados por el parametro de entrada "tamano" de ambas subrutinas.</div>
 </br></br>
 
 ### RTI
 
-Por ultimo se hizo el desarrollo del programa principal que probase el correcto funcionamiento de la subrutina RTI en conjunto con el resto de las subrutinas. Para ello se establecian parametros inciales como tamanos de recepcion y transmision o destino en memoria donde guardar determinados caracteres. El algoritmo de esta rutina principal es similar al descrito en el apartado de diagrama de flujo. Para el correcto funcionamiento de esta rutina, era necesario habilitar las interrupciones. Esto se logra guardando el valor $2000 el registro SR. La recepcion y transmision de las lineas A y B se realizaba editando los ficheros puertoa y puertob con el comando odt -x "nombre fichero".
+<div style="text-align: justify">Por ultimo se hizo el desarrollo del programa principal que probase el correcto funcionamiento de la subrutina RTI en conjunto con el resto de las subrutinas. Para ello se establecian parametros inciales como tamanos de recepcion y transmision o destino en memoria donde guardar determinados caracteres. El algoritmo de esta rutina principal es similar al descrito en el apartado de diagrama de flujo. Para el correcto funcionamiento de esta rutina, era necesario habilitar las interrupciones. Esto se logra guardando el valor $2000 el registro SR. La recepcion y transmision de las lineas A y B se realizaba editando los ficheros puertoa y puertob con el comando odt -x "nombre fichero".</div>
 
 
 ## Observaciones finales
 
+<div style="text-align: justify">Gracias a la practica de entrada/salida, hemos logrado familiarizarnos con la realizacion de operaciones Entrada/Salida en un periferico mediante interrupciones.</div>
+</br>
+<div style="text-align: justify">A lo largo de la carrera se hecha de menos en algunas asignaturas una manifestacion practica de los conceptos teoricos vistos en clase y/o estudiados para el examen. Gracias a esta practica, se consigue justamente eso, conocer a un nivel basico al menos, el funcionamiento de los procesos que involucran la entrada y salida de datos por los perifericos. A su vez, programar en ensamblador es la mejor forma de conocer a nivel fundamental las operaciones que realiza un ordenador. Realizar programas en lenguajes de bajo nivel nos ayuda a no despegarnos de la esecia de la informatica, la cual a veces se olvida cuando nos acostumbramos a lenguajes como Pyhton, que son fantasticos, pero muchas veces no llegamos a comprender lo que hace internamente nuestra maquina cuando ejecutamos programas en lenguajes de alto nivel.</div>
+</br>
+<div style="text-align: justify">El tiempo de realizacion de la practica es complicado de estimar, ya que anteriormente a la codificacion de la misma, dedicamos muchas horas a comprender el tema teorico de interrupciones, el lenguaje MC68k y la DUART MC68681. Dicho esto, el tiempo en el que se desarrollo la practica fue de 3 semanas y a continuacion se adjunta una tabla estimando los tiempos empleados por cada subrutina o "snippet" del proyecto:</div>
 
+### Tabla de tiempos
+
+| Tabla de tiempos: |  |   
+| ----------- | --------
+| Estudio del lenguaje | 10 
+| Comprension del enunciado | 14
+| Diseno de bufferes | 4 
+| Setup de variables  | 5 
+| INIT         | 2 
+| LEECAR     | 3 
+| ESCCAR		 | 4 
+| SCAN    | 6 
+| PRINT    | 8 
+| RTI | 10 
+| Pruebas | 14 
+
+> **Nota:**
+> El tiempo esta expresado en horas
+
+<div style="text-align: justify">El tiempo estimado para la elaboracion de la practica fue de 80 horas aproximadamente. Como se explica anteriormente este tiempo es deficil de medir ya que hay otros elementos involucrados en poder realizar este proyecto con exito. Uno de estos factores es la experiencia obtenida en el desarrollo del proyecto de estructura de computadores del 3er cuatrimestre de la carrera, la elaboracion de este proyecto sento unas buenas bases para esta practica.</div>
+
+
+## Extras
+
+### Agradecimientos
+
+<div style="text-align: justify">Agradecimiento especial a Santiago Rodriguez, srodri@fi.upm.es por el apoyo otorgado a lo largo del desarrollo de la practica y por su respuesta a las dudas en breves periodos de tiempo. Al estar atascado en un error durante horas, es magnifico poder contar con el apoyo de un profesor en todo momento.</div>
 
 ### ASCII Fonts
 
-https://manytools.org/hacker-tools/ascii-banner/
+Se ha utilizado [Ascii Fonts](https://manytools.org/hacker-tools/ascii-banner) para crear los dibujos ascii para poder navegar mas facilmente por el codigo. El minimapa de vscode hace que rapidamente se pueda ver visualmente donde esta situada cada subrutina y cada caso de prueba. Las fuentes utilizadas son: "dos rebel" para los titulos grandes y "ansi shadow" para los titulos pequenos.
 
-    - Big ASCII font: DOS Rebel
-    - Small ASCII font: ANSI Shadow
+### VSCode
+
+Se ha utilizado [Visual Studio Code](https://code.visualstudio.com/) para la elaboracion de la practica, como se menciona en el apartado anterior, el minimapa de este editor de texto hace que la navegacion sea mas sencilla.
+
+### Plugin M68K
+
+Se ha utilizado el plugin de vscode M68K para poder obtener alguna ayuda a nivel visual para este lenguaje de programacion. El codigo de este plugin se encuentra en [GitHub repo](https://github.com/stevenjs/M68k-Assembly).
