@@ -433,7 +433,7 @@ INICIO:     MOVE.L #BUS_ERROR,8 * Bus error handler
             BSR INIT
             MOVE.W #$2000,SR * Permite interrupciones
 
-            BRA PR_EX_1
+            *BRA PR_EX_1
 
 *** Hay que escribir en el buffer A (0) el contenido que queremos tratar ***
             MOVE.W #2000,D3
